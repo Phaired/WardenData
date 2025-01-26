@@ -1,0 +1,25 @@
+﻿services:
+  wardendata:
+    container_name: wardendata
+    image: wardendata
+    ports:
+      - 5001:8080
+    build:
+      context: .
+      dockerfile: WardenData/Dockerfile
+  
+  database:
+    container_name: wardendb
+    image: postgres:16.4-alpine
+    ports:
+      - 55432:5432
+    environment:
+      POSTGRES_DB: warden
+      POSTGRES_USER: adm
+      POSTGRES_PASSWORD: adm
+    volumes:
+      - db-data:/var/lib/postgresql/data:rw
+
+
+volumes:
+  db-data:

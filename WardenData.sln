@@ -1,0 +1,21 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WardenData", "WardenData\WardenData.csproj", "{7CB37575-FA15-4E15-BC09-9AD38FE0A50A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A4D12CC8-9E54-4A8E-A436-CAB3CC12C364}"
+	ProjectSection(SolutionItems) = preProject
+		compose.yaml = compose.yaml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7CB37575-FA15-4E15-BC09-9AD38FE0A50A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CB37575-FA15-4E15-BC09-9AD38FE0A50A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CB37575-FA15-4E15-BC09-9AD38FE0A50A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CB37575-FA15-4E15-BC09-9AD38FE0A50A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
