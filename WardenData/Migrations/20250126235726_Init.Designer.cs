@@ -11,8 +11,8 @@ using WardenData.Models;
 namespace WardenData.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250125220855_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250126235726_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -35,12 +35,14 @@ namespace WardenData.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("name");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_orders_name");
 
                     b.ToTable("Orders");
                 });
@@ -53,21 +55,26 @@ namespace WardenData.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("DesiredValue")
-                        .HasColumnType("integer");
+                    b.Property<long>("DesiredValue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("desired_value");
 
                     b.Property<string>("EffectName")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("effect_name");
 
-                    b.Property<int>("MaxValue")
-                        .HasColumnType("integer");
+                    b.Property<long>("MaxValue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("max_value");
 
-                    b.Property<int>("MinValue")
-                        .HasColumnType("integer");
+                    b.Property<long>("MinValue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("min_value");
 
                     b.Property<int>("OrderId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("order_id");
 
                     b.HasKey("Id");
 
@@ -86,19 +93,32 @@ namespace WardenData.Migrations
 
                     b.Property<string>("EffectsAfter")
                         .IsRequired()
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("effects_after");
 
                     b.Property<bool>("HasSucceed")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("has_succeed");
+
+                    b.Property<bool>("HasSynchronized")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("has_synchronized");
 
                     b.Property<bool>("IsTenta")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_tenta");
 
                     b.Property<int>("RuneId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("rune_id");
 
                     b.Property<int>("SessionId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("session_id");
 
                     b.HasKey("Id");
 
@@ -117,17 +137,21 @@ namespace WardenData.Migrations
 
                     b.Property<string>("InitialEffects")
                         .IsRequired()
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("initial_effects");
 
                     b.Property<int>("OrderId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("order_id");
 
                     b.Property<string>("RunesPrices")
                         .IsRequired()
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("runes_prices");
 
                     b.Property<long>("Timestamp")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("timestamp");
 
                     b.HasKey("Id");
 
@@ -142,7 +166,8 @@ namespace WardenData.Migrations
                         .WithMany("OrderEffects")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_order_effects_orders");
 
                     b.Navigation("Order");
                 });
@@ -150,10 +175,11 @@ namespace WardenData.Migrations
             modelBuilder.Entity("WardenData.Models.RuneHistory", b =>
                 {
                     b.HasOne("WardenData.Models.Session", "Session")
-                        .WithMany("RuneHistories")
+                        .WithMany()
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_rune_histories_sessions");
 
                     b.Navigation("Session");
                 });
@@ -164,7 +190,8 @@ namespace WardenData.Migrations
                         .WithMany("Sessions")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_sessions_orders");
 
                     b.Navigation("Order");
                 });
@@ -174,11 +201,6 @@ namespace WardenData.Migrations
                     b.Navigation("OrderEffects");
 
                     b.Navigation("Sessions");
-                });
-
-            modelBuilder.Entity("WardenData.Models.Session", b =>
-                {
-                    b.Navigation("RuneHistories");
                 });
 #pragma warning restore 612, 618
         }

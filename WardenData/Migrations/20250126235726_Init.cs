@@ -6,7 +6,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace WardenData.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class Init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,7 +17,7 @@ namespace WardenData.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false)
+                    name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -30,18 +30,18 @@ namespace WardenData.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    OrderId = table.Column<int>(type: "integer", nullable: false),
-                    EffectName = table.Column<string>(type: "text", nullable: false),
-                    MinValue = table.Column<int>(type: "integer", nullable: false),
-                    MaxValue = table.Column<int>(type: "integer", nullable: false),
-                    DesiredValue = table.Column<int>(type: "integer", nullable: false)
+                    order_id = table.Column<int>(type: "integer", nullable: false),
+                    effect_name = table.Column<string>(type: "text", nullable: false),
+                    min_value = table.Column<long>(type: "bigint", nullable: false),
+                    max_value = table.Column<long>(type: "bigint", nullable: false),
+                    desired_value = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_OrderEffects", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_OrderEffects_Orders_OrderId",
-                        column: x => x.OrderId,
+                        name: "fk_order_effects_orders",
+                        column: x => x.order_id,
                         principalTable: "Orders",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -53,17 +53,17 @@ namespace WardenData.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    OrderId = table.Column<int>(type: "integer", nullable: false),
-                    Timestamp = table.Column<long>(type: "bigint", nullable: false),
-                    InitialEffects = table.Column<string>(type: "jsonb", nullable: false),
-                    RunesPrices = table.Column<string>(type: "jsonb", nullable: false)
+                    order_id = table.Column<int>(type: "integer", nullable: false),
+                    timestamp = table.Column<long>(type: "bigint", nullable: false),
+                    initial_effects = table.Column<string>(type: "jsonb", nullable: false),
+                    runes_prices = table.Column<string>(type: "jsonb", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Sessions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Sessions_Orders_OrderId",
-                        column: x => x.OrderId,
+                        name: "fk_sessions_orders",
+                        column: x => x.order_id,
                         principalTable: "Orders",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -75,43 +75,44 @@ namespace WardenData.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    SessionId = table.Column<int>(type: "integer", nullable: false),
-                    RuneId = table.Column<int>(type: "integer", nullable: false),
-                    IsTenta = table.Column<bool>(type: "boolean", nullable: false),
-                    EffectsAfter = table.Column<string>(type: "jsonb", nullable: false),
-                    HasSucceed = table.Column<bool>(type: "boolean", nullable: false)
+                    session_id = table.Column<int>(type: "integer", nullable: false),
+                    rune_id = table.Column<int>(type: "integer", nullable: false),
+                    is_tenta = table.Column<bool>(type: "boolean", nullable: false),
+                    effects_after = table.Column<string>(type: "jsonb", nullable: false),
+                    has_succeed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    has_synchronized = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RuneHistories", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_RuneHistories_Sessions_SessionId",
-                        column: x => x.SessionId,
+                        name: "fk_rune_histories_sessions",
+                        column: x => x.session_id,
                         principalTable: "Sessions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_OrderEffects_OrderId",
+                name: "IX_OrderEffects_order_id",
                 table: "OrderEffects",
-                column: "OrderId");
+                column: "order_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Orders_Name",
+                name: "ix_orders_name",
                 table: "Orders",
-                column: "Name",
+                column: "name",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_RuneHistories_SessionId",
+                name: "IX_RuneHistories_session_id",
                 table: "RuneHistories",
-                column: "SessionId");
+                column: "session_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Sessions_OrderId",
+                name: "IX_Sessions_order_id",
                 table: "Sessions",
-                column: "OrderId");
+                column: "order_id");
         }
 
         /// <inheritdoc />

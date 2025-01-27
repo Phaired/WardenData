@@ -1,5 +1,7 @@
 ﻿services:
   wardendata:
+    depends_on: 
+      - database
     container_name: wardendata
     image: wardendata
     ports:

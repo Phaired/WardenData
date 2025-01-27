@@ -1,4 +1,7 @@
 
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+
 namespace WardenData.Controllers;
 
 using WardenData.Models;
@@ -21,15 +24,27 @@ public class DataController : ControllerBase
     }
 
     [HttpPost("orders")]
-    public async Task<IActionResult> ReceiveOrders([FromBody] List<Order> orders)
+    public async Task<IActionResult> ReceiveOrders([FromBody] List<OrderDTO> orders)
     {
-        return await ProcessEntities(orders, _context.Orders);
+        // Convert OrderDTOs to Order entities if needed
+        var orderEntities = orders.Select(dto => new Order { Id = dto.Id, Name = dto.Name }).ToList();
+        return await ProcessEntities(orderEntities, _context.Orders);
     }
 
     [HttpPost("order-effects")]
     public async Task<IActionResult> ReceiveOrderEffects(
-        [FromBody] List<OrderEffect> effects)
+        [FromBody] List<OrderEffectDTO> effectDtos)
     {
+        var effects = effectDtos.Select(dto => new OrderEffect 
+        {
+            Id = dto.Id,
+            OrderId = dto.OrderId,  // Direct mapping to foreign key
+            EffectName = dto.EffectName,
+            MinValue = dto.MinValue,
+            MaxValue = dto.MaxValue,
+            DesiredValue = dto.DesiredValue
+        }).ToList();
+
         return await ProcessEntities(effects, _context.OrderEffects);
     }
 
@@ -37,16 +52,17 @@ public class DataController : ControllerBase
     public async Task<IActionResult> ReceiveSessions(
         [FromBody] List<SessionDTO> sessionDtos)
     {
-        var sessions = sessionDtos.Select(dto => new Session
-        {
+        // Convert DTOs to Session entities
+        var sessions = sessionDtos.Select(dto => new Session {
             Id = dto.Id,
             OrderId = dto.OrderId,
             Timestamp = dto.Timestamp,
-            InitialEffects = JsonSerializer.Serialize(dto.InitialEffects),
-            RunesPrices = JsonSerializer.Serialize(dto.RunesPrices)
+            InitialEffects = dto.InitialEffects,
+            RunesPrices = dto.RunesPrices
         }).ToList();
 
-        return await ProcessEntities(sessions, _context.Sessions);
+        // Explicitly specify the generic type parameter
+        return await ProcessEntities<Session>(sessions, _context.Sessions);
     }
 
     [HttpPost("rune-history")]
@@ -59,15 +75,16 @@ public class DataController : ControllerBase
             SessionId = dto.SessionId,
             RuneId = dto.RuneId,
             IsTenta = dto.IsTenta,
-            EffectsAfter = JsonSerializer.Serialize(dto.EffectsAfter),
+            EffectsAfter = dto.EffectsAfter.ToString(),
             HasSucceed = dto.HasSucceed
         }).ToList();
 
         return await ProcessEntities(histories, _context.RuneHistories);
     }
 
-    private async Task<IActionResult> ProcessEntities<T>(List<T> entities, DbSet<T> dbSet) 
-        where T : class
+    private async Task<IActionResult> ProcessEntities<T>(
+        List<T> entities, 
+        DbSet<T> dbSet) where T : class
     {
         try
         {
@@ -88,16 +105,56 @@ public class SessionDTO
     public int Id { get; set; }
     public int OrderId { get; set; }
     public long Timestamp { get; set; }
-    public JsonElement InitialEffects { get; set; }
-    public JsonElement RunesPrices { get; set; }
+    
+    [Required]  // Add validation attribute
+    public string InitialEffects { get; set; }
+    
+    [Required]  // Add validation attribute
+    public string RunesPrices { get; set; }
 }
-
 public class RuneHistoryDTO
 {
     public int Id { get; set; }
+
+    [JsonPropertyName("session_id")] // Match Rust's snake_case
     public int SessionId { get; set; }
+
+    [JsonPropertyName("rune_id")]
     public int RuneId { get; set; }
+
+    [JsonPropertyName("is_tenta")]
     public bool IsTenta { get; set; }
+
+    [JsonPropertyName("effects_after")]
     public JsonElement EffectsAfter { get; set; }
+
+    [JsonPropertyName("has_succeed")]
     public bool HasSucceed { get; set; }
+}
+
+public class OrderDTO
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    // Removed the Effects collection
+}
+
+public class OrderEffectDTO
+{
+    public int Id { get; set; }
+    
+    [JsonPropertyName("OrderId")]
+    public int OrderId { get; set; }
+    
+    [JsonPropertyName("EffectName")]
+    public string EffectName { get; set; }
+    
+    [JsonPropertyName("MinValue")]
+    public long MinValue { get; set; }
+    
+    [JsonPropertyName("MaxValue")]
+    public long MaxValue { get; set; }
+    
+    [JsonPropertyName("DesiredValue")]
+    public long DesiredValue { get; set; }
 }
