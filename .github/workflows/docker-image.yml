@@ -44,8 +44,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6.2.0
         with:
-          context: ./FileStorage
-          file: ./FileStorage/Dockerfile
+          context: ./WardenData
+          file: ./WardenData/Dockerfile
           platforms: linux/amd64,linux/arm64,linux/arm64/v8
           provenance: false
           push: true
