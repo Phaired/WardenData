@@ -7,7 +7,7 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-noble-chiseled-extra AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["WardenData/WardenData.csproj", "WardenData/"]
+COPY ["WardenData/WardenData.csproj", "."]
 RUN dotnet restore "WardenData/WardenData.csproj"
 COPY . .
 WORKDIR "/src/WardenData"
