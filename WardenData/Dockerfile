@@ -6,7 +6,7 @@ EXPOSE 8080
 EXPOSE 8081
 
 # Build Stage
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0.104 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
