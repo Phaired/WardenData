@@ -6,9 +6,13 @@ EXPOSE 8080
 EXPOSE 8081
 
 # Build Stage
-FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# Disable vulnerability analysis to prevent restore crash on arm64
+ENV NUGET_ENABLE_VULNERABILITY_ANALYSIS=false
+
 COPY ["WardenData/WardenData.csproj", "WardenData/"]
 RUN dotnet restore "WardenData/WardenData.csproj"
 COPY . .
