@@ -1,31 +1,32 @@
-﻿# Base Stage
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-noble-chiseled AS base
-USER $APP_UID
+﻿# Stage 1: Build environment
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0 AS build-env
+
+# Stage 2: Base image
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
+EXPOSE 5000
 
-# Build Stage
-FROM mcr.microsoft.com/dotnet/sdk:9.0.104 AS build
+# Stage 3: Build the application
+FROM build-env AS build
 ARG BUILD_CONFIGURATION=Release
+ARG TARGETARCH
 WORKDIR /src
-
-# Disable vulnerability analysis to prevent restore crash on arm64
-ENV NUGET_ENABLE_VULNERABILITY_ANALYSIS=false
-
-COPY ["WardenData/WardenData.csproj", "WardenData/"]
-RUN dotnet restore "WardenData/WardenData.csproj"
+COPY ["FileStorage.csproj", "./"]
+RUN dotnet restore -a $TARGETARCH
 COPY . .
-WORKDIR "/src/WardenData"
-RUN dotnet build "WardenData.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build
 
-# Publish Stage
+# Stage 4: Publish the application
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "WardenData.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# Final Stage
+# Stage 5: Final image
 FROM base AS final
 WORKDIR /app
+
+# Copy the published application
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "WardenData.dll"]
+
+# Set the entrypoint to the script
+CMD ["dotnet", "FileStorage.dll"]
