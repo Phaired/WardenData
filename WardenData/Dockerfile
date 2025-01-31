@@ -11,7 +11,7 @@ FROM build-env AS build
 ARG BUILD_CONFIGURATION=Release
 ARG TARGETARCH
 WORKDIR /src
-COPY ["FileStorage.csproj", "./"]
+COPY ["WardenData.csproj", "./"]
 RUN dotnet restore -a $TARGETARCH
 COPY . .
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build
@@ -29,4 +29,4 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 
 # Set the entrypoint to the script
-CMD ["dotnet", "FileStorage.dll"]
+CMD ["dotnet", "WardenData.dll"]
