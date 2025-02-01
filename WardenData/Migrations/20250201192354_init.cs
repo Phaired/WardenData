@@ -1,12 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace WardenData.Migrations
 {
     /// <inheritdoc />
-    public partial class Init : Migration
+    public partial class init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,22 +15,22 @@ namespace WardenData.Migrations
                 name: "Orders",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    original_id = table.Column<int>(type: "integer", nullable: false),
                     name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Orders", x => x.Id);
+                    table.PrimaryKey("PK_Orders", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
                 name: "OrderEffects",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    order_id = table.Column<int>(type: "integer", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    original_id = table.Column<int>(type: "integer", nullable: false),
+                    order_id = table.Column<Guid>(type: "uuid", nullable: false),
                     effect_name = table.Column<string>(type: "text", nullable: false),
                     min_value = table.Column<long>(type: "bigint", nullable: false),
                     max_value = table.Column<long>(type: "bigint", nullable: false),
@@ -38,12 +38,12 @@ namespace WardenData.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_OrderEffects", x => x.Id);
+                    table.PrimaryKey("PK_OrderEffects", x => x.id);
                     table.ForeignKey(
                         name: "fk_order_effects_orders",
                         column: x => x.order_id,
                         principalTable: "Orders",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -51,21 +51,21 @@ namespace WardenData.Migrations
                 name: "Sessions",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    order_id = table.Column<int>(type: "integer", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    original_id = table.Column<int>(type: "integer", nullable: false),
+                    order_id = table.Column<Guid>(type: "uuid", nullable: false),
                     timestamp = table.Column<long>(type: "bigint", nullable: false),
                     initial_effects = table.Column<string>(type: "jsonb", nullable: false),
                     runes_prices = table.Column<string>(type: "jsonb", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Sessions", x => x.Id);
+                    table.PrimaryKey("PK_Sessions", x => x.id);
                     table.ForeignKey(
                         name: "fk_sessions_orders",
                         column: x => x.order_id,
                         principalTable: "Orders",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -73,23 +73,22 @@ namespace WardenData.Migrations
                 name: "RuneHistories",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    session_id = table.Column<int>(type: "integer", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    original_id = table.Column<int>(type: "integer", nullable: false),
+                    session_id = table.Column<Guid>(type: "uuid", nullable: false),
                     rune_id = table.Column<int>(type: "integer", nullable: false),
                     is_tenta = table.Column<bool>(type: "boolean", nullable: false),
                     effects_after = table.Column<string>(type: "jsonb", nullable: false),
-                    has_succeed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    has_synchronized = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
+                    has_succeed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RuneHistories", x => x.Id);
+                    table.PrimaryKey("PK_RuneHistories", x => x.id);
                     table.ForeignKey(
                         name: "fk_rune_histories_sessions",
                         column: x => x.session_id,
                         principalTable: "Sessions",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
