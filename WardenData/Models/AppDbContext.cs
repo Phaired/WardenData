@@ -18,16 +18,26 @@ public class AppDbContext : DbContext
     {
         if (!optionsBuilder.IsConfigured)
         {
+            // Exemple de connexion à PostgreSQL
             optionsBuilder.UseNpgsql("Host=localhost;Database=warden;Username=adm;Password=adm");
         }
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Order configuration
+        // Configuration de l'entité Order
         modelBuilder.Entity<Order>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id)
+                .HasColumnName("id")
+                .HasColumnType("uuid");
+            
+            // Mapping de l'identifiant d'origine
+            entity.Property(e => e.OriginalId)
+                .IsRequired()
+                .HasColumnName("original_id");
+
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(255)
@@ -38,13 +48,22 @@ public class AppDbContext : DbContext
                 .HasDatabaseName("ix_orders_name");
         });
 
-        // OrderEffect configuration
+        // Configuration de l'entité OrderEffect
         modelBuilder.Entity<OrderEffect>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+            entity.Property(e => e.Id)
+                .HasColumnName("id")
+                .HasColumnType("uuid");
+
+            entity.Property(e => e.OriginalId)
+                .IsRequired()
+                .HasColumnName("original_id");
+
             entity.Property(e => e.OrderId)
-                .HasColumnName("order_id");
+                .IsRequired()
+                .HasColumnName("order_id")
+                .HasColumnType("uuid");
                 
             entity.Property(e => e.EffectName)
                 .IsRequired()
@@ -65,13 +84,22 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_order_effects_orders");
         });
 
-        // Session configuration
+        // Configuration de l'entité Session
         modelBuilder.Entity<Session>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+            entity.Property(e => e.Id)
+                .HasColumnName("id")
+                .HasColumnType("uuid");
+
+            entity.Property(e => e.OriginalId)
+                .IsRequired()
+                .HasColumnName("original_id");
+
             entity.Property(e => e.OrderId)
-                .HasColumnName("order_id");
+                .IsRequired()
+                .HasColumnName("order_id")
+                .HasColumnType("uuid");
                 
             entity.Property(e => e.Timestamp)
                 .HasColumnName("timestamp");
@@ -92,13 +120,22 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_sessions_orders");
         });
 
-        // RuneHistory configuration
+        // Configuration de l'entité RuneHistory
         modelBuilder.Entity<RuneHistory>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+            entity.Property(e => e.Id)
+                .HasColumnName("id")
+                .HasColumnType("uuid");
+
+            entity.Property(e => e.OriginalId)
+                .IsRequired()
+                .HasColumnName("original_id");
+
             entity.Property(e => e.SessionId)
-                .HasColumnName("session_id");
+                .IsRequired()
+                .HasColumnName("session_id")
+                .HasColumnType("uuid");
                 
             entity.Property(e => e.RuneId)
                 .HasColumnName("rune_id");
@@ -114,10 +151,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.HasSucceed)
                 .HasColumnName("has_succeed")
                 .HasDefaultValue(false);
-                
-            entity.Property(e => e.HasSynchronized)
-                .HasColumnName("has_synchronized")
-                .HasDefaultValue(false);
+
+            // Suppression de la propriété HasSynchronized côté serveur
 
             entity.HasOne(e => e.Session)
                 .WithMany()

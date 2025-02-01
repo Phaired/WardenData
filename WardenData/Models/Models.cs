@@ -6,9 +6,11 @@ namespace WardenData.Models;
 public class Order
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id { get; set; }
-    
+    public Guid Id { get; set; }  // UUID généré côté serveur
+
+    [Required]
+    public int OriginalId { get; set; }  // Identifiant d'origine du client
+
     [Required]
     public string Name { get; set; }
     
@@ -19,11 +21,13 @@ public class Order
 public class OrderEffect
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id { get; set; }
-    
+    public Guid Id { get; set; }  // UUID serveur
+
     [Required]
-    public int OrderId { get; set; }
+    public int OriginalId { get; set; }  // Identifiant d'origine
+
+    [Required]
+    public Guid OrderId { get; set; }  // FK vers l'UUID de Order
     
     [Required]
     public string EffectName { get; set; }
@@ -39,12 +43,14 @@ public class OrderEffect
 public class Session
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id { get; set; }
-    
+    public Guid Id { get; set; }  // UUID serveur
+
     [Required]
-    public int OrderId { get; set; }
-    
+    public int OriginalId { get; set; }  // Identifiant d'origine
+
+    [Required]
+    public Guid OrderId { get; set; }  // FK vers l'UUID de Order
+
     [Required]
     public long Timestamp { get; set; }
     
@@ -61,12 +67,14 @@ public class Session
 public class RuneHistory
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id { get; set; }
-    
+    public Guid Id { get; set; }  // UUID serveur
+
     [Required]
-    public int SessionId { get; set; }
-    
+    public int OriginalId { get; set; }  // Identifiant d'origine
+
+    [Required]
+    public Guid SessionId { get; set; }  // FK vers l'UUID de Session
+
     [Required]
     public int RuneId { get; set; }
     
@@ -78,9 +86,6 @@ public class RuneHistory
     
     [Required]
     public bool HasSucceed { get; set; }
-    
-    [Required]
-    public bool HasSynchronized { get; set; }
 
     [ForeignKey("SessionId")]
     public Session Session { get; set; }

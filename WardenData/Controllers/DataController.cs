@@ -1,14 +1,12 @@
-
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-
-namespace WardenData.Controllers;
-
-using WardenData.Models;
-using EFCore.BulkExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using EFCore.BulkExtensions;
+using WardenData.Models;
 using System.Text.Json;
+
+namespace WardenData.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -26,19 +24,42 @@ public class DataController : ControllerBase
     [HttpPost("orders")]
     public async Task<IActionResult> ReceiveOrders([FromBody] List<OrderDTO> orders)
     {
-        // Convert OrderDTOs to Order entities if needed
-        var orderEntities = orders.Select(dto => new Order { Id = dto.Id, Name = dto.Name }).ToList();
+        // Pour chaque DTO, on crée un Order en générant un nouvel UUID pour Id
+        // et en stockant l'identifiant original dans OriginalId
+        var orderEntities = orders.Select(dto => new Order
+        {
+            Id = Guid.NewGuid(),
+            OriginalId = dto.Id,
+            Name = dto.Name
+        }).ToList();
+
         return await ProcessEntities(orderEntities, _context.Orders);
     }
 
     [HttpPost("order-effects")]
-    public async Task<IActionResult> ReceiveOrderEffects(
-        [FromBody] List<OrderEffectDTO> effectDtos)
+    public async Task<IActionResult> ReceiveOrderEffects([FromBody] List<OrderEffectDTO> effectDtos)
     {
-        var effects = effectDtos.Select(dto => new OrderEffect 
+        // Récupérer les identifiants originaux des Order référencés par les OrderEffect
+        var originalOrderIds = effectDtos.Select(dto => dto.OrderId).Distinct().ToList();
+        var orders = await _context.Orders
+            .Where(o => originalOrderIds.Contains(o.OriginalId))
+            .ToDictionaryAsync(o => o.OriginalId, o => o.Id);
+
+        // S'il manque un Order référencé, on renvoie une erreur
+        foreach (var orderId in originalOrderIds)
         {
-            Id = dto.Id,
-            OrderId = dto.OrderId,  // Direct mapping to foreign key
+            if (!orders.ContainsKey(orderId))
+            {
+                return BadRequest($"Order avec OriginalId {orderId} introuvable.");
+            }
+        }
+
+        // Pour chaque OrderEffect, on génère un nouvel UUID et on retrouve l'UUID du Order parent
+        var effects = effectDtos.Select(dto => new OrderEffect
+        {
+            Id = Guid.NewGuid(),
+            OriginalId = dto.Id,
+            OrderId = orders[dto.OrderId],
             EffectName = dto.EffectName,
             MinValue = dto.MinValue,
             MaxValue = dto.MaxValue,
@@ -49,30 +70,57 @@ public class DataController : ControllerBase
     }
 
     [HttpPost("sessions")]
-    public async Task<IActionResult> ReceiveSessions(
-        [FromBody] List<SessionDTO> sessionDtos)
+    public async Task<IActionResult> ReceiveSessions([FromBody] List<SessionDTO> sessionDtos)
     {
-        // Convert DTOs to Session entities
-        var sessions = sessionDtos.Select(dto => new Session {
-            Id = dto.Id,
-            OrderId = dto.OrderId,
+        // Récupérer les identifiants originaux des Order référencés par les sessions
+        var originalOrderIds = sessionDtos.Select(dto => dto.OrderId).Distinct().ToList();
+        var orders = await _context.Orders
+            .Where(o => originalOrderIds.Contains(o.OriginalId))
+            .ToDictionaryAsync(o => o.OriginalId, o => o.Id);
+
+        foreach (var orderId in originalOrderIds)
+        {
+            if (!orders.ContainsKey(orderId))
+            {
+                return BadRequest($"Order avec OriginalId {orderId} introuvable.");
+            }
+        }
+
+        var sessions = sessionDtos.Select(dto => new Session
+        {
+            Id = Guid.NewGuid(),
+            OriginalId = dto.Id,
+            OrderId = orders[dto.OrderId],
             Timestamp = dto.Timestamp,
             InitialEffects = dto.InitialEffects,
             RunesPrices = dto.RunesPrices
         }).ToList();
 
-        // Explicitly specify the generic type parameter
-        return await ProcessEntities<Session>(sessions, _context.Sessions);
+        return await ProcessEntities(sessions, _context.Sessions);
     }
 
     [HttpPost("rune-history")]
-    public async Task<IActionResult> ReceiveRuneHistory(
-        [FromBody] List<RuneHistoryDTO> historyDtos)
+    public async Task<IActionResult> ReceiveRuneHistory([FromBody] List<RuneHistoryDTO> historyDtos)
     {
+        // Récupérer les identifiants originaux des Sessions référencées par les RuneHistory
+        var originalSessionIds = historyDtos.Select(dto => dto.SessionId).Distinct().ToList();
+        var sessions = await _context.Sessions
+            .Where(s => originalSessionIds.Contains(s.OriginalId))
+            .ToDictionaryAsync(s => s.OriginalId, s => s.Id);
+
+        foreach (var sessionId in originalSessionIds)
+        {
+            if (!sessions.ContainsKey(sessionId))
+            {
+                return BadRequest($"Session avec OriginalId {sessionId} introuvable.");
+            }
+        }
+
         var histories = historyDtos.Select(dto => new RuneHistory
         {
-            Id = dto.Id,
-            SessionId = dto.SessionId,
+            Id = Guid.NewGuid(),
+            OriginalId = dto.Id,
+            SessionId = sessions[dto.SessionId],
             RuneId = dto.RuneId,
             IsTenta = dto.IsTenta,
             EffectsAfter = dto.EffectsAfter.ToString(),
@@ -82,9 +130,7 @@ public class DataController : ControllerBase
         return await ProcessEntities(histories, _context.RuneHistories);
     }
 
-    private async Task<IActionResult> ProcessEntities<T>(
-        List<T> entities, 
-        DbSet<T> dbSet) where T : class
+    private async Task<IActionResult> ProcessEntities<T>(List<T> entities, DbSet<T> dbSet) where T : class
     {
         try
         {
@@ -93,30 +139,31 @@ public class DataController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error processing {typeof(T).Name}");
-            return StatusCode(500, $"Error processing {typeof(T).Name}");
+            _logger.LogError(ex, $"Erreur lors du traitement de {typeof(T).Name}");
+            return StatusCode(500, $"Erreur lors du traitement de {typeof(T).Name}");
         }
     }
 }
 
-// DTO Classes
+// Les DTO restent inchangés (ils utilisent les id d'origine)
 public class SessionDTO
 {
     public int Id { get; set; }
     public int OrderId { get; set; }
     public long Timestamp { get; set; }
     
-    [Required]  // Add validation attribute
+    [Required]
     public string InitialEffects { get; set; }
     
-    [Required]  // Add validation attribute
+    [Required]
     public string RunesPrices { get; set; }
 }
+
 public class RuneHistoryDTO
 {
     public int Id { get; set; }
 
-    [JsonPropertyName("session_id")] // Match Rust's snake_case
+    [JsonPropertyName("session_id")]
     public int SessionId { get; set; }
 
     [JsonPropertyName("rune_id")]
@@ -136,7 +183,6 @@ public class OrderDTO
 {
     public int Id { get; set; }
     public string Name { get; set; }
-    // Removed the Effects collection
 }
 
 public class OrderEffectDTO
