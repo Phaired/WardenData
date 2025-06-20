@@ -134,7 +134,16 @@ public class DataController : ControllerBase
     {
         try
         {
-            await _context.BulkInsertOrUpdateAsync(entities);
+            // Check provider name to determine if it's InMemory
+            if (_context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+            {
+                await dbSet.AddRangeAsync(entities);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                await _context.BulkInsertOrUpdateAsync(entities);
+            }
             return Ok(new { Received = entities.Count });
         }
         catch (Exception ex)

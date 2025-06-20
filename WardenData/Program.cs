@@ -5,7 +5,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer(); // Standard for .NET 6+
+builder.Services.AddSwaggerGen(); // Standard for .NET 6+
 
 // Add database context
 builder.Services.AddDbContext<AppDbContext>(options => 
@@ -29,7 +30,8 @@ catch (Exception ex)
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseAuthorization();
