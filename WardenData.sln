@@ -1,11 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+#
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WardenData", "WardenData\WardenData.csproj", "{7CB37575-FA15-4E15-BC09-9AD38FE0A50A}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A4D12CC8-9E54-4A8E-A436-CAB3CC12C364}"
 	ProjectSection(SolutionItems) = preProject
 		compose.yaml = compose.yaml
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WardenData.Tests", "WardenData.Tests\WardenData.Tests.csproj", "{237E590F-4AC6-491D-9D9F-AD8568538ECC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,5 +20,9 @@ Global
 		{7CB37575-FA15-4E15-BC09-9AD38FE0A50A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7CB37575-FA15-4E15-BC09-9AD38FE0A50A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7CB37575-FA15-4E15-BC09-9AD38FE0A50A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{237E590F-4AC6-491D-9D9F-AD8568538ECC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{237E590F-4AC6-491D-9D9F-AD8568538ECC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{237E590F-4AC6-491D-9D9F-AD8568538ECC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{237E590F-4AC6-491D-9D9F-AD8568538ECC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
