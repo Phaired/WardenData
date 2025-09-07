@@ -3,7 +3,7 @@
     depends_on: 
       - database
     container_name: wardendata
-    image: wardendata
+    image: ghcr.io/warden-squad/wardendata:latest
     ports:
       - 5001:8080
     build:

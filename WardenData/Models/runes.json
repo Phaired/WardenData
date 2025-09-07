@@ -1,0 +1,512 @@
+{
+  "Initiative": {
+    "name": "Initiative",
+    "rune_name": "Rune Ini",
+    "weight": 0.1,
+    "rune": 10,
+    "pa_rune": 30,
+    "ra_rune": 100,
+    "id": [1, 2, 3],
+    "effect_id": 1
+  },
+  "Pods": {
+    "name": "Pods",
+    "rune_name": "Rune Pod",
+    "weight": 0.25,
+    "rune": 10,
+    "pa_rune": 30,
+    "ra_rune": 100,
+    "id": [4, 5, 6],
+    "effect_id": 4
+  },
+  "Vitalité": {
+    "name": "Vitalité",
+    "rune_name": "Rune Vi",
+    "weight": 0.2,
+    "rune": 5,
+    "pa_rune": 15,
+    "ra_rune": 50,
+    "id": [7, 8, 9],
+    "effect_id": 7
+  },
+  "Agilité": {
+    "name": "Agilité",
+    "rune_name": "Rune Age",
+    "weight": 1,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": 10,
+    "id": [10, 11, 12],
+    "effect_id": 10
+  },
+  "Chance": {
+    "name": "Chance",
+    "rune_name": "Rune Cha",
+    "weight": 1,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": 10,
+    "id": [13, 14, 15],
+    "effect_id": 13
+  },
+  "Force": {
+    "name": "Force",
+    "rune_name": "Rune Fo",
+    "weight": 1,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": 10,
+    "id": [16, 17, 18],
+    "effect_id": 16
+  },
+  "Intelligence": {
+    "name": "Intelligence",
+    "rune_name": "Rune Ine",
+    "weight": 1,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": 10,
+    "id": [19, 20, 21],
+    "effect_id": 19
+  },
+  "Puissance": {
+    "name": "Puissance",
+    "rune_name": "Rune Pui",
+    "weight": 2,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": 10,
+    "id": [22, 23, 24],
+    "effect_id": 22
+  },
+  "Puissance (pièges)": {
+    "name": "Puissance (pièges)",
+    "rune_name": "Rune Per Pi",
+    "weight": 2,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": 10,
+    "id": [25, 26, 27],
+    "effect_id": 25
+  },
+  "Résistance Air": {
+    "name": "Résistance Air",
+    "rune_name": "Rune Ré Air",
+    "weight": 2,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [28, 29],
+    "effect_id": 28
+  },
+  "Résistance Critiques": {
+    "name": "Résistance Critiques",
+    "rune_name": "Rune Ré Cri",
+    "weight": 2,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [30, 31],
+    "effect_id": 30
+  },
+  "Résistance Eau": {
+    "name": "Résistance Eau",
+    "rune_name": "Rune Ré Eau",
+    "weight": 2,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [32, 33],
+    "effect_id": 32
+  },
+  "Résistance Feu": {
+    "name": "Résistance Feu",
+    "rune_name": "Rune Ré Feu",
+    "weight": 2,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [34, 35],
+    "effect_id": 34
+  },
+  "Résistance Neutre": {
+    "name": "Résistance Neutre",
+    "rune_name": "Rune Ré Neutre",
+    "weight": 2,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [36, 37],
+    "effect_id": 36
+  },
+  "Résistance Poussée": {
+    "name": "Résistance Poussée",
+    "rune_name": "Rune Ré Pou",
+    "weight": 2,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": 9,
+    "id": [38, 39, 40],
+    "effect_id": 38
+  },
+  "Résistance Terre": {
+    "name": "Résistance Terre",
+    "rune_name": "Rune Ré Terre",
+    "weight": 2,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [41, 42],
+    "effect_id": 41
+  },
+  "Prospection": {
+    "name": "Prospection",
+    "rune_name": "Rune Prospe",
+    "weight": 3,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [94, 95, 96],
+    "effect_id": 94
+  },
+  "Sagesse": {
+    "name": "Sagesse",
+    "rune_name": "Rune Sa",
+    "weight": 3,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": 10,
+    "id": [43, 44, 45],
+    "effect_id": 43
+  },
+  "Fuite": {
+    "name": "Fuite",
+    "rune_name": "Rune Fui",
+    "weight": 4,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [46, 47],
+    "effect_id": 46
+  },
+  "Tacle": {
+    "name": "Tacle",
+    "rune_name": "Rune Tac",
+    "weight": 4,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [48, 49],
+    "effect_id": 48
+  },
+  "Dommages de poussée": {
+    "name": "Dommages de poussée",
+    "rune_name": "Rune Do Pou",
+    "weight": 5,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [50, 51],
+    "effect_id": 50
+  },
+  "Dommages Air": {
+    "name": "Dommages Air",
+    "rune_name": "Rune Do Air",
+    "weight": 5,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [52, 53],
+    "effect_id": 52
+  },
+  "Dommages Critiques": {
+    "name": "Dommages Critiques",
+    "rune_name": "Rune Do Cri",
+    "weight": 5,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [54, 55],
+    "effect_id": 54
+  },
+  "Dommages Eau": {
+    "name": "Dommages Eau",
+    "rune_name": "Rune Do Eau",
+    "weight": 5,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [56, 57],
+    "effect_id": 56
+  },
+  "Dommages Feu": {
+    "name": "Dommages Feu",
+    "rune_name": "Rune Do Feu",
+    "weight": 5,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [58, 59],
+    "effect_id": 58
+  },
+  "Dommages Neutre": {
+    "name": "Dommages Neutre",
+    "rune_name": "Rune Do Neutre",
+    "weight": 5,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [60, 61],
+    "effect_id": 60
+  },
+  "Dommages Pièges": {
+    "name": "Dommages Pièges",
+    "rune_name": "Rune Do Pi",
+    "weight": 5,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [62, 63],
+    "effect_id": 62
+  },
+  "Dommages Terre": {
+    "name": "Dommages Terre",
+    "rune_name": "Rune Do Terre",
+    "weight": 5,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [64, 65],
+    "effect_id": 64
+  },
+  "% Résistance Air": {
+    "name": "% Résistance Air",
+    "rune_name": "Rune Ré Per Air",
+    "weight": 6,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [66],
+    "effect_id": 66
+  },
+  "% Résistance Eau": {
+    "name": "% Résistance Eau",
+    "rune_name": "Rune Ré Per Eau",
+    "weight": 6,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [67],
+    "effect_id": 67
+  },
+  "% Résistance Feu": {
+    "name": "% Résistance Feu",
+    "rune_name": "Rune Ré Per Feu",
+    "weight": 6,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [68],
+    "effect_id": 68
+  },
+  "% Résistance Neutre": {
+    "name": "% Résistance Neutre",
+    "rune_name": "Rune Ré Per Neutre",
+    "weight": 6,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [69],
+    "effect_id": 69
+  },
+  "% Résistance Terre": {
+    "name": "% Résistance Terre",
+    "rune_name": "Rune Ré Per Terre",
+    "weight": 6,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [70],
+    "effect_id": 70
+  },
+  "Esquive PA": {
+    "name": "Esquive PA",
+    "rune_name": "Rune Ré Pa",
+    "weight": 7,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [71, 72],
+    "effect_id": 71
+  },
+  "Esquive PM": {
+    "name": "Esquive PM",
+    "rune_name": "Rune Ré Pme",
+    "weight": 7,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [73, 74],
+    "effect_id": 73
+  },
+  "Retrait PA": {
+    "name": "Retrait PA",
+    "rune_name": "Rune Ret Pa",
+    "weight": 7,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [75, 76],
+    "effect_id": 75
+  },
+  "Retrait PM": {
+    "name": "Retrait PM",
+    "rune_name": "Rune Ret Pme",
+    "weight": 7,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [77, 78],
+    "effect_id": 77
+  },
+  "Critique": {
+    "name": "Critique",
+    "rune_name": "Rune Cri",
+    "weight": 10,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [79],
+    "effect_id": 79
+  },
+  "Renvoie dommages": {
+    "name": "Renvoie dommages",
+    "rune_name": "Rune Do Ren",
+    "weight": 10,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [80],
+    "effect_id": 80
+  },
+  "Soins": {
+    "name": "Soins",
+    "rune_name": "Rune So",
+    "weight": 10,
+    "rune": 1,
+    "pa_rune": 3,
+    "ra_rune": null,
+    "id": [81, 82],
+    "effect_id": 81
+  },
+  "Dommages distance": {
+    "name": "Dommages distance",
+    "rune_name": "Rune Do Per Di",
+    "weight": 15,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [83],
+    "effect_id": 83
+  },
+  "Dommages d'armes": {
+    "name": "Dommages d'armes",
+    "rune_name": "Rune Do Per Ar",
+    "weight": 15,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [84],
+    "effect_id": 84
+  },
+  "Dommages aux sorts": {
+    "name": "Dommages aux sorts",
+    "rune_name": "Rune Do Per So",
+    "weight": 15,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [85],
+    "effect_id": 85
+  },
+  "Dommages mêlée": {
+    "name": "Dommages mêlée",
+    "rune_name": "Rune Do Per Mé",
+    "weight": 15,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [86],
+    "effect_id": 86
+  },
+  "Résistance distance": {
+    "name": "Résistance distance",
+    "rune_name": "Rune Ré Per Di",
+    "weight": 15,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [87],
+    "effect_id": 87
+  },
+  "Résistance mêlée": {
+    "name": "Résistance mêlée",
+    "rune_name": "Rune Ré Per Mé",
+    "weight": 15,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [88],
+    "effect_id": 88
+  },
+  "Dommages": {
+    "name": "Dommages",
+    "rune_name": "Rune Do",
+    "weight": 20,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [89],
+    "effect_id": 89
+  },
+  "Invocations": {
+    "name": "Invocations",
+    "rune_name": "Rune Invo",
+    "weight": 30,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [90],
+    "effect_id": 90
+  },
+  "Portée": {
+    "name": "Portée",
+    "rune_name": "Rune Po",
+    "weight": 51,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [91],
+    "effect_id": 91
+  },
+  "PM": {
+    "name": "PM",
+    "rune_name": "Rune Ga Pme",
+    "weight": 90,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [92],
+    "effect_id": 92
+  },
+  "PA": {
+    "name": "PA",
+    "rune_name": "Rune Ga Pa",
+    "weight": 100,
+    "rune": 1,
+    "pa_rune": null,
+    "ra_rune": null,
+    "id": [93],
+    "effect_id": 93
+  }
+}
