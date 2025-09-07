@@ -61,17 +61,56 @@ public class StatisticsController : ControllerBase
         if (isTenta.HasValue)
             query = query.Where(r => r.IsTenta == isTenta.Value);
 
-        var results = await query
-            .GroupBy(r => new { r.RuneId, r.IsTenta })
+        var allHistories = await query.ToListAsync();
+        
+        var filteredHistories = new List<(RuneHistory history, string effectName, bool hasSucceed)>();
+
+        // Parse each rune history to extract specific effect results
+        foreach (var rh in allHistories)
+        {
+            if (rh.EffectsAfter != null)
+            {
+                var effectsAfter = JsonSerializer.Deserialize<JsonElement>(rh.EffectsAfter);
+                if (effectsAfter.TryGetProperty("effects", out var effectsArray))
+                {
+                    foreach (var effect in effectsArray.EnumerateArray())
+                    {
+                        var name = effect.GetProperty("effect_name").GetString() ?? "";
+                        
+                        // Skip if we're filtering by effect name and this doesn't match
+                        if (!string.IsNullOrEmpty(effectName) && 
+                            !name.Contains(effectName, StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        // Determine if this specific effect succeeded
+                        bool effectSucceeded = false;
+                        if (rh.HasSucceed)
+                        {
+                            // If the rune succeeded overall, check if this specific effect improved
+                            var currentValue = effect.GetProperty("current_value").GetInt32();
+                            var desiredValue = effect.GetProperty("desired_value").GetInt32();
+                            effectSucceeded = currentValue >= desiredValue;
+                        }
+
+                        filteredHistories.Add((rh, name, effectSucceeded));
+                    }
+                }
+            }
+        }
+
+        // Group by RuneId, IsTenta, and EffectName for accurate statistics
+        var results = filteredHistories
+            .GroupBy(x => new { x.history.RuneId, x.history.IsTenta, x.effectName })
             .Select(g => new
             {
                 g.Key.RuneId,
                 g.Key.IsTenta,
+                EffectName = g.Key.effectName,
                 TotalAttempts = g.Count(),
-                Successes = g.Sum(r => r.HasSucceed ? 1 : 0),
-                SuccessRate = g.Average(r => r.HasSucceed ? 1.0 : 0.0) * 100
+                Successes = g.Count(x => x.hasSucceed),
+                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.hasSucceed) / g.Count() * 100 : 0
             })
-            .ToListAsync();
+            .ToList();
 
         var statsDto = results.Select(r =>
         {
@@ -80,18 +119,13 @@ public class StatisticsController : ControllerBase
             {
                 RuneId = r.RuneId,
                 RuneName = runeInfo?.RuneName ?? $"Rune {r.RuneId}",
-                EffectName = runeInfo?.Name ?? "Unknown",
+                EffectName = r.EffectName,
                 TotalAttempts = r.TotalAttempts,
                 Successes = r.Successes,
                 SuccessRate = Math.Round(r.SuccessRate, 2),
                 IsTenta = r.IsTenta
             };
         }).ToList();
-
-        if (!string.IsNullOrEmpty(effectName))
-        {
-            statsDto = statsDto.Where(s => s.EffectName.Contains(effectName, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
 
         return Ok(statsDto.OrderByDescending(s => s.SuccessRate));
     }

@@ -130,6 +130,7 @@ public class DataController : ControllerBase
         return await ProcessEntities(histories, _context.RuneHistories);
     }
 
+
     private async Task<IActionResult> ProcessEntities<T>(List<T> entities, DbSet<T> dbSet) where T : class
     {
         try
