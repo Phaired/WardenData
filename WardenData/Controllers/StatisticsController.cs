@@ -70,30 +70,33 @@ public class StatisticsController : ControllerBase
         {
             if (rh.EffectsAfter != null)
             {
-                var effectsAfter = JsonSerializer.Deserialize<JsonElement>(rh.EffectsAfter);
-                if (effectsAfter.TryGetProperty("effects", out var effectsArray))
+                try
                 {
-                    foreach (var effect in effectsArray.EnumerateArray())
+                    var effectsAfter = JsonSerializer.Deserialize<JsonElement>(rh.EffectsAfter);
+                    if (effectsAfter.TryGetProperty("effects", out var effectsArray))
                     {
-                        var name = effect.GetProperty("effect_name").GetString() ?? "";
-                        
-                        // Skip if we're filtering by effect name and this doesn't match
-                        if (!string.IsNullOrEmpty(effectName) && 
-                            !name.Contains(effectName, StringComparison.OrdinalIgnoreCase))
-                            continue;
-
-                        // Determine if this specific effect succeeded
-                        bool effectSucceeded = false;
-                        if (rh.HasSucceed)
+                        foreach (var effect in effectsArray.EnumerateArray())
                         {
-                            // If the rune succeeded overall, check if this specific effect improved
-                            var currentValue = effect.GetProperty("current_value").GetInt32();
-                            var desiredValue = effect.GetProperty("desired_value").GetInt32();
-                            effectSucceeded = currentValue >= desiredValue;
-                        }
+                            if (effect.TryGetProperty("effect_name", out var effectNameElement))
+                            {
+                                var name = effectNameElement.GetString() ?? "";
+                                
+                                // Skip if we're filtering by effect name and this doesn't match
+                                if (!string.IsNullOrEmpty(effectName) && 
+                                    !name.Contains(effectName, StringComparison.OrdinalIgnoreCase))
+                                    continue;
 
-                        filteredHistories.Add((rh, name, effectSucceeded));
+                                // For now, let's just use the overall HasSucceed value
+                                // TODO: Implement more sophisticated effect-specific success detection
+                                filteredHistories.Add((rh, name, rh.HasSucceed));
+                            }
+                        }
                     }
+                }
+                catch (JsonException)
+                {
+                    // Skip malformed JSON entries
+                    continue;
                 }
             }
         }
