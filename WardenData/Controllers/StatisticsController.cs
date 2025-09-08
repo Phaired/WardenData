@@ -155,6 +155,33 @@ public class StatisticsController : ControllerBase
         return successCount;
     }
 
+    private (JsonElement? effectsArray, bool success) TryParseEffectsJson(string? jsonString)
+    {
+        if (string.IsNullOrEmpty(jsonString))
+            return (null, false);
+
+        try
+        {
+            var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            
+            // Handle both cases: direct array or object with "effects" property
+            if (jsonElement.ValueKind == JsonValueKind.Array)
+            {
+                return (jsonElement, true);
+            }
+            else if (jsonElement.TryGetProperty("effects", out var effectsArray))
+            {
+                return (effectsArray, true);
+            }
+            
+            return (null, false);
+        }
+        catch (JsonException)
+        {
+            return (null, false);
+        }
+    }
+
     [HttpGet("rune-success-rates")]
     public async Task<ActionResult<List<RuneSuccessStatsDto>>> GetRuneSuccessRates(
         [FromQuery] int? runeId = null,
@@ -186,80 +213,58 @@ public class StatisticsController : ControllerBase
             var session = sessionGroup.First().s;
             
             // Start with initial effects as the "previous" state
-            JsonElement? previousEffectsJson = null;
-            if (session.InitialEffects != null)
-            {
-                try
-                {
-                    previousEffectsJson = JsonSerializer.Deserialize<JsonElement>(session.InitialEffects);
-                }
-                catch (JsonException)
-                {
-                    continue; // Skip session with malformed initial effects
-                }
-            }
+            var (previousEffectsArray, initialParseSuccess) = TryParseEffectsJson(session.InitialEffects);
+            if (!initialParseSuccess || !previousEffectsArray.HasValue)
+                continue;
 
             foreach (var item in sessionHistories)
             {
                 var rh = item.rh;
                 
-                if (rh.EffectsAfter != null && previousEffectsJson.HasValue)
+                var (effectsAfterArray, afterParseSuccess) = TryParseEffectsJson(rh.EffectsAfter);
+                if (!afterParseSuccess || !effectsAfterArray.HasValue)
+                    continue;
+                
+                // Create dictionary of previous values for quick lookup
+                var previousValues = new Dictionary<string, int>();
+                foreach (var prevEffect in previousEffectsArray.Value.EnumerateArray())
                 {
-                    try
+                    if (prevEffect.TryGetProperty("effect_name", out var nameEl) &&
+                        prevEffect.TryGetProperty("current_value", out var valueEl))
                     {
-                        var effectsAfter = JsonSerializer.Deserialize<JsonElement>(rh.EffectsAfter);
-                        
-                        if (effectsAfter.TryGetProperty("effects", out var effectsAfterArray) &&
-                            previousEffectsJson.Value.TryGetProperty("effects", out var previousEffectsArray))
-                        {
-                            // Create dictionary of previous values for quick lookup
-                            var previousValues = new Dictionary<string, int>();
-                            foreach (var prevEffect in previousEffectsArray.EnumerateArray())
-                            {
-                                if (prevEffect.TryGetProperty("effect_name", out var nameEl) &&
-                                    prevEffect.TryGetProperty("current_value", out var valueEl))
-                                {
-                                    previousValues[nameEl.GetString() ?? ""] = valueEl.GetInt32();
-                                }
-                            }
-
-                            foreach (var effect in effectsAfterArray.EnumerateArray())
-                            {
-                                if (effect.TryGetProperty("effect_name", out var effectNameElement))
-                                {
-                                    var name = effectNameElement.GetString() ?? "";
-                                    
-                                    // Skip if we're filtering by effect name and this doesn't match
-                                    if (!string.IsNullOrEmpty(effectName) && 
-                                        !name.Contains(effectName, StringComparison.OrdinalIgnoreCase))
-                                        continue;
-
-                                    // Get current value and previous value for this specific rune application
-                                    var currentValue = effect.TryGetProperty("current_value", out var currentEl) ? currentEl.GetInt32() : 0;
-                                    var previousValue = previousValues.TryGetValue(name, out var prevVal) ? prevVal : currentValue;
-                                    var actualGain = currentValue - previousValue;
-                                    
-                                    // Determine expected gain based on rune type
-                                    var expectedGain = GetExpectedGainForRune(rh.RuneId, rh.IsTenta);
-                                    
-                                    // Success is determined by actual gain being exactly the expected gain (runes give exact values)
-                                    // For runes, success means we got at least the expected minimum gain
-                                    var realSuccess = actualGain >= expectedGain;
-                                    
-                                    filteredHistories.Add((rh, session, name, realSuccess, actualGain));
-                                }
-                            }
-                        }
-                        
-                        // Update previous state for next iteration
-                        previousEffectsJson = effectsAfter;
-                    }
-                    catch (JsonException)
-                    {
-                        // Skip malformed JSON entries
-                        continue;
+                        previousValues[nameEl.GetString() ?? ""] = valueEl.GetInt32();
                     }
                 }
+
+                foreach (var effect in effectsAfterArray.Value.EnumerateArray())
+                {
+                    if (effect.TryGetProperty("effect_name", out var effectNameElement))
+                    {
+                        var name = effectNameElement.GetString() ?? "";
+                        
+                        // Skip if we're filtering by effect name and this doesn't match
+                        if (!string.IsNullOrEmpty(effectName) && 
+                            !name.Contains(effectName, StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        // Get current value and previous value for this specific rune application
+                        var currentValue = effect.TryGetProperty("current_value", out var currentEl) ? currentEl.GetInt32() : 0;
+                        var previousValue = previousValues.TryGetValue(name, out var prevVal) ? prevVal : currentValue;
+                        var actualGain = currentValue - previousValue;
+                        
+                        // Determine expected gain based on rune type
+                        var expectedGain = GetExpectedGainForRune(rh.RuneId, rh.IsTenta);
+                        
+                        // Success is determined by actual gain being exactly the expected gain (runes give exact values)
+                        // For runes, success means we got at least the expected minimum gain
+                        var realSuccess = actualGain >= expectedGain;
+                        
+                        filteredHistories.Add((rh, session, name, realSuccess, actualGain));
+                    }
+                }
+                
+                // Update previous state for next iteration
+                previousEffectsArray = effectsAfterArray;
             }
         }
 
