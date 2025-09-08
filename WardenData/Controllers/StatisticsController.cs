@@ -48,55 +48,212 @@ public class StatisticsController : ControllerBase
         _context = context;
     }
 
-    [HttpGet("rune-success-rates")]
-    public async Task<ActionResult<List<RuneSuccessStatsDto>>> GetRuneSuccessRates(
-        [FromQuery] int? runeId = null,
-        [FromQuery] string? effectName = null,
-        [FromQuery] bool? isTenta = null)
+    private int GetExpectedGainForRune(int runeId, bool isTenta)
     {
-        var query = _context.RuneHistories.AsQueryable();
-
-        if (runeId.HasValue)
-            query = query.Where(r => r.RuneId == runeId.Value);
-        if (isTenta.HasValue)
-            query = query.Where(r => r.IsTenta == isTenta.Value);
-
-        var allHistories = await query.ToListAsync();
-        
-        var filteredHistories = new List<(RuneHistory history, string effectName, bool hasSucceed)>();
-
-        // Parse each rune history to extract specific effect results
-        foreach (var rh in allHistories)
+        if (_runesInfo.TryGetValue(runeId, out var runeInfo))
         {
-            if (rh.EffectsAfter != null)
+            // For tenta runes, use pa_rune or ra_rune value if available
+            if (isTenta)
+            {
+                return runeInfo.PaRuneValue ?? runeInfo.RaRuneValue ?? runeInfo.RuneValue;
+            }
+            // For normal runes, use the base rune value
+            return runeInfo.RuneValue;
+        }
+        // Fallback to minimum expected gain if rune info not found
+        return 1;
+    }
+
+    private int CalculateRealSuccessesForSession(Session session, List<RuneHistory> runeHistories)
+    {
+        var successCount = 0;
+        
+        // Start with initial effects as the "previous" state
+        JsonElement? previousEffectsJson = null;
+        if (session.InitialEffects != null)
+        {
+            try
+            {
+                previousEffectsJson = JsonSerializer.Deserialize<JsonElement>(session.InitialEffects);
+            }
+            catch (JsonException)
+            {
+                return 0; // Skip session with malformed initial effects
+            }
+        }
+
+        var orderedHistories = runeHistories.OrderBy(x => x.Id).ToList();
+
+        foreach (var rh in orderedHistories)
+        {
+            if (rh.EffectsAfter != null && previousEffectsJson.HasValue)
             {
                 try
                 {
                     var effectsAfter = JsonSerializer.Deserialize<JsonElement>(rh.EffectsAfter);
-                    if (effectsAfter.TryGetProperty("effects", out var effectsArray))
+                    
+                    if (effectsAfter.TryGetProperty("effects", out var effectsAfterArray) &&
+                        previousEffectsJson.Value.TryGetProperty("effects", out var previousEffectsArray))
                     {
-                        foreach (var effect in effectsArray.EnumerateArray())
+                        // Create dictionary of previous values for quick lookup
+                        var previousValues = new Dictionary<string, int>();
+                        foreach (var prevEffect in previousEffectsArray.EnumerateArray())
+                        {
+                            if (prevEffect.TryGetProperty("effect_name", out var nameEl) &&
+                                prevEffect.TryGetProperty("current_value", out var valueEl))
+                            {
+                                previousValues[nameEl.GetString() ?? ""] = valueEl.GetInt32();
+                            }
+                        }
+
+                        bool hasAnySuccess = false;
+                        foreach (var effect in effectsAfterArray.EnumerateArray())
                         {
                             if (effect.TryGetProperty("effect_name", out var effectNameElement))
                             {
                                 var name = effectNameElement.GetString() ?? "";
-                                
-                                // Skip if we're filtering by effect name and this doesn't match
-                                if (!string.IsNullOrEmpty(effectName) && 
-                                    !name.Contains(effectName, StringComparison.OrdinalIgnoreCase))
-                                    continue;
 
-                                // For now, let's just use the overall HasSucceed value
-                                // TODO: Implement more sophisticated effect-specific success detection
-                                filteredHistories.Add((rh, name, rh.HasSucceed));
+                                // Get current value and previous value for this specific rune application
+                                var currentValue = effect.TryGetProperty("current_value", out var currentEl) ? currentEl.GetInt32() : 0;
+                                var previousValue = previousValues.TryGetValue(name, out var prevVal) ? prevVal : currentValue;
+                                var actualGain = currentValue - previousValue;
+                                
+                                // Determine expected gain based on rune type
+                                var expectedGain = GetExpectedGainForRune(rh.RuneId, rh.IsTenta);
+                                
+                                // Success is determined by actual gain being at least the expected gain
+                                if (actualGain >= expectedGain)
+                                {
+                                    hasAnySuccess = true;
+                                    break; // One successful effect is enough for this rune to be considered successful
+                                }
                             }
                         }
+                        
+                        if (hasAnySuccess)
+                        {
+                            successCount++;
+                        }
                     }
+                    
+                    // Update previous state for next iteration
+                    previousEffectsJson = effectsAfter;
                 }
                 catch (JsonException)
                 {
                     // Skip malformed JSON entries
                     continue;
+                }
+            }
+        }
+
+        return successCount;
+    }
+
+    [HttpGet("rune-success-rates")]
+    public async Task<ActionResult<List<RuneSuccessStatsDto>>> GetRuneSuccessRates(
+        [FromQuery] int? runeId = null,
+        [FromQuery] string? effectName = null,
+        [FromQuery] bool? isTenta = null,
+        [FromQuery] int? minGain = 5)
+    {
+        // Get rune histories ordered by session and ID to properly track before/after values
+        var query = from rh in _context.RuneHistories
+                    join s in _context.Sessions on rh.SessionId equals s.Id
+                    orderby s.Id, rh.Id
+                    select new { rh, s };
+
+        if (runeId.HasValue)
+            query = query.Where(x => x.rh.RuneId == runeId.Value);
+        if (isTenta.HasValue)
+            query = query.Where(x => x.rh.IsTenta == isTenta.Value);
+
+        var allHistories = await query.ToListAsync();
+        
+        var filteredHistories = new List<(RuneHistory history, Session session, string effectName, bool hasSucceed, int gainValue)>();
+
+        // Group by session to properly track progression
+        var sessionGroups = allHistories.GroupBy(x => x.s.Id);
+
+        foreach (var sessionGroup in sessionGroups)
+        {
+            var sessionHistories = sessionGroup.OrderBy(x => x.rh.Id).ToList();
+            var session = sessionGroup.First().s;
+            
+            // Start with initial effects as the "previous" state
+            JsonElement? previousEffectsJson = null;
+            if (session.InitialEffects != null)
+            {
+                try
+                {
+                    previousEffectsJson = JsonSerializer.Deserialize<JsonElement>(session.InitialEffects);
+                }
+                catch (JsonException)
+                {
+                    continue; // Skip session with malformed initial effects
+                }
+            }
+
+            foreach (var item in sessionHistories)
+            {
+                var rh = item.rh;
+                
+                if (rh.EffectsAfter != null && previousEffectsJson.HasValue)
+                {
+                    try
+                    {
+                        var effectsAfter = JsonSerializer.Deserialize<JsonElement>(rh.EffectsAfter);
+                        
+                        if (effectsAfter.TryGetProperty("effects", out var effectsAfterArray) &&
+                            previousEffectsJson.Value.TryGetProperty("effects", out var previousEffectsArray))
+                        {
+                            // Create dictionary of previous values for quick lookup
+                            var previousValues = new Dictionary<string, int>();
+                            foreach (var prevEffect in previousEffectsArray.EnumerateArray())
+                            {
+                                if (prevEffect.TryGetProperty("effect_name", out var nameEl) &&
+                                    prevEffect.TryGetProperty("current_value", out var valueEl))
+                                {
+                                    previousValues[nameEl.GetString() ?? ""] = valueEl.GetInt32();
+                                }
+                            }
+
+                            foreach (var effect in effectsAfterArray.EnumerateArray())
+                            {
+                                if (effect.TryGetProperty("effect_name", out var effectNameElement))
+                                {
+                                    var name = effectNameElement.GetString() ?? "";
+                                    
+                                    // Skip if we're filtering by effect name and this doesn't match
+                                    if (!string.IsNullOrEmpty(effectName) && 
+                                        !name.Contains(effectName, StringComparison.OrdinalIgnoreCase))
+                                        continue;
+
+                                    // Get current value and previous value for this specific rune application
+                                    var currentValue = effect.TryGetProperty("current_value", out var currentEl) ? currentEl.GetInt32() : 0;
+                                    var previousValue = previousValues.TryGetValue(name, out var prevVal) ? prevVal : currentValue;
+                                    var actualGain = currentValue - previousValue;
+                                    
+                                    // Determine expected gain based on rune type
+                                    var expectedGain = GetExpectedGainForRune(rh.RuneId, rh.IsTenta);
+                                    
+                                    // Success is determined by actual gain being exactly the expected gain (runes give exact values)
+                                    // For runes, success means we got at least the expected minimum gain
+                                    var realSuccess = actualGain >= expectedGain;
+                                    
+                                    filteredHistories.Add((rh, session, name, realSuccess, actualGain));
+                                }
+                            }
+                        }
+                        
+                        // Update previous state for next iteration
+                        previousEffectsJson = effectsAfter;
+                    }
+                    catch (JsonException)
+                    {
+                        // Skip malformed JSON entries
+                        continue;
+                    }
                 }
             }
         }
@@ -111,7 +268,8 @@ public class StatisticsController : ControllerBase
                 EffectName = g.Key.effectName,
                 TotalAttempts = g.Count(),
                 Successes = g.Count(x => x.hasSucceed),
-                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.hasSucceed) / g.Count() * 100 : 0
+                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.hasSucceed) / g.Count() * 100 : 0,
+                AverageGain = g.Count() > 0 ? g.Average(x => x.gainValue) : 0
             })
             .ToList();
 
@@ -126,7 +284,8 @@ public class StatisticsController : ControllerBase
                 TotalAttempts = r.TotalAttempts,
                 Successes = r.Successes,
                 SuccessRate = Math.Round(r.SuccessRate, 2),
-                IsTenta = r.IsTenta
+                IsTenta = r.IsTenta,
+                AverageGain = Math.Round(r.AverageGain, 2)
             };
         }).ToList();
 
@@ -219,7 +378,9 @@ public class StatisticsController : ControllerBase
             if (endDate.HasValue && sessionDate > endDate.Value) continue;
 
             var totalRunesUsed = result.sessionRunes.Count();
-            var totalSuccesses = result.sessionRunes.Count(r => r.HasSucceed);
+            
+            // Calculate real successes using the same logic as rune-success-rates
+            var realSuccesses = CalculateRealSuccessesForSession(result.s, result.sessionRunes.ToList());
             
             long totalCost = 0;
             if (result.s.RunesPrices != null)
@@ -240,15 +401,15 @@ public class StatisticsController : ControllerBase
             if (minCost.HasValue && totalCost < minCost.Value) continue;
             if (maxCost.HasValue && totalCost > maxCost.Value) continue;
 
-            var successRate = totalRunesUsed > 0 ? (double)totalSuccesses / totalRunesUsed * 100 : 0;
-            var costPerSuccess = totalSuccesses > 0 ? (double)totalCost / totalSuccesses : 0;
+            var successRate = totalRunesUsed > 0 ? (double)realSuccesses / totalRunesUsed * 100 : 0;
+            var costPerSuccess = realSuccesses > 0 ? (double)totalCost / realSuccesses : 0;
 
             costEfficiencies.Add(new CostEfficiencyDto
             {
                 SessionId = result.s.Id,
                 OrderName = result.o.Name,
                 TotalRunesUsed = totalRunesUsed,
-                TotalSuccesses = totalSuccesses,
+                TotalSuccesses = realSuccesses,
                 TotalCost = totalCost,
                 SuccessRate = Math.Round(successRate, 2),
                 CostPerSuccess = Math.Round(costPerSuccess, 2),
@@ -263,36 +424,126 @@ public class StatisticsController : ControllerBase
     public async Task<ActionResult<List<TentaComparisonDto>>> GetTentaComparison(
         [FromQuery] string? effectName = null)
     {
-        var results = await _context.RuneHistories.ToListAsync();
+        // Use the same logic as rune-success-rates to get accurate success calculations
+        var query = from rh in _context.RuneHistories
+                    join s in _context.Sessions on rh.SessionId equals s.Id
+                    orderby s.Id, rh.Id
+                    select new { rh, s };
 
-        var comparisons = new List<TentaComparisonDto>();
+        var allHistories = await query.ToListAsync();
+        
         var effectGroups = new Dictionary<string, Dictionary<bool, (int attempts, int successes)>>();
+        var sessionGroups = allHistories.GroupBy(x => x.s.Id);
 
-        foreach (var rh in results)
+        foreach (var sessionGroup in sessionGroups)
         {
-            if (rh.EffectsAfter != null)
+            var sessionHistories = sessionGroup.OrderBy(x => x.rh.Id).ToList();
+            var session = sessionGroup.First().s;
+            
+            // Start with initial effects as the "previous" state
+            JsonElement? previousEffectsJson = null;
+            if (session.InitialEffects != null)
             {
-                var effectsAfter = JsonSerializer.Deserialize<JsonElement>(rh.EffectsAfter);
-                if (effectsAfter.TryGetProperty("effects", out var effectsArray))
+                try
                 {
-                    foreach (var effect in effectsArray.EnumerateArray())
+                    previousEffectsJson = JsonSerializer.Deserialize<JsonElement>(session.InitialEffects);
+                }
+                catch (JsonException)
+                {
+                    continue; // Skip session with malformed initial effects
+                }
+            }
+
+            foreach (var item in sessionHistories)
+            {
+                var rh = item.rh;
+                
+                if (rh.EffectsAfter != null && previousEffectsJson.HasValue)
+                {
+                    try
                     {
-                        var name = effect.GetProperty("effect_name").GetString() ?? "";
+                        var effectsAfter = JsonSerializer.Deserialize<JsonElement>(rh.EffectsAfter);
                         
-                        if (!string.IsNullOrEmpty(effectName) && 
-                            !name.Contains(effectName, StringComparison.OrdinalIgnoreCase))
-                            continue;
+                        if (effectsAfter.TryGetProperty("effects", out var effectsAfterArray) &&
+                            previousEffectsJson.Value.TryGetProperty("effects", out var previousEffectsArray))
+                        {
+                            // Create dictionary of previous values for quick lookup
+                            var previousValues = new Dictionary<string, int>();
+                            foreach (var prevEffect in previousEffectsArray.EnumerateArray())
+                            {
+                                if (prevEffect.TryGetProperty("effect_name", out var nameEl) &&
+                                    prevEffect.TryGetProperty("current_value", out var valueEl))
+                                {
+                                    previousValues[nameEl.GetString() ?? ""] = valueEl.GetInt32();
+                                }
+                            }
 
-                        if (!effectGroups.ContainsKey(name))
-                            effectGroups[name] = new Dictionary<bool, (int, int)> { { true, (0, 0) }, { false, (0, 0) } };
+                            bool hasAnySuccess = false;
+                            foreach (var effect in effectsAfterArray.EnumerateArray())
+                            {
+                                if (effect.TryGetProperty("effect_name", out var effectNameElement))
+                                {
+                                    var name = effectNameElement.GetString() ?? "";
+                                    
+                                    // Skip if we're filtering by effect name and this doesn't match
+                                    if (!string.IsNullOrEmpty(effectName) && 
+                                        !name.Contains(effectName, StringComparison.OrdinalIgnoreCase))
+                                        continue;
 
-                        var current = effectGroups[name][rh.IsTenta];
-                        effectGroups[name][rh.IsTenta] = (current.attempts + 1, current.successes + (rh.HasSucceed ? 1 : 0));
+                                    // Initialize effect group if needed
+                                    if (!effectGroups.ContainsKey(name))
+                                        effectGroups[name] = new Dictionary<bool, (int, int)> { { true, (0, 0) }, { false, (0, 0) } };
+
+                                    // Get current value and previous value for this specific rune application
+                                    var currentValue = effect.TryGetProperty("current_value", out var currentEl) ? currentEl.GetInt32() : 0;
+                                    var previousValue = previousValues.TryGetValue(name, out var prevVal) ? prevVal : currentValue;
+                                    var actualGain = currentValue - previousValue;
+                                    
+                                    // Determine expected gain based on rune type
+                                    var expectedGain = GetExpectedGainForRune(rh.RuneId, rh.IsTenta);
+                                    
+                                    // Success is determined by actual gain being at least the expected gain
+                                    if (actualGain >= expectedGain)
+                                    {
+                                        hasAnySuccess = true;
+                                    }
+                                }
+                            }
+                            
+                            // Count attempts and successes for each effect that this rune could affect
+                            foreach (var effect in effectsAfterArray.EnumerateArray())
+                            {
+                                if (effect.TryGetProperty("effect_name", out var effectNameElement))
+                                {
+                                    var name = effectNameElement.GetString() ?? "";
+                                    
+                                    if (!string.IsNullOrEmpty(effectName) && 
+                                        !name.Contains(effectName, StringComparison.OrdinalIgnoreCase))
+                                        continue;
+
+                                    if (!effectGroups.ContainsKey(name))
+                                        effectGroups[name] = new Dictionary<bool, (int, int)> { { true, (0, 0) }, { false, (0, 0) } };
+
+                                    var current = effectGroups[name][rh.IsTenta];
+                                    effectGroups[name][rh.IsTenta] = (current.attempts + 1, current.successes + (hasAnySuccess ? 1 : 0));
+                                    break; // Only count once per rune
+                                }
+                            }
+                        }
+                        
+                        // Update previous state for next iteration
+                        previousEffectsJson = effectsAfter;
+                    }
+                    catch (JsonException)
+                    {
+                        // Skip malformed JSON entries
+                        continue;
                     }
                 }
             }
         }
 
+        var comparisons = new List<TentaComparisonDto>();
         foreach (var effectGroup in effectGroups)
         {
             foreach (var tentaGroup in effectGroup.Value)

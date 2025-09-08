@@ -9,6 +9,7 @@ public class RuneSuccessStatsDto
     public int Successes { get; set; }
     public double SuccessRate { get; set; }
     public bool IsTenta { get; set; }
+    public double AverageGain { get; set; }
 }
 
 public class EffectProgressionDto
