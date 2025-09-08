@@ -52,10 +52,15 @@ public class StatisticsController : ControllerBase
     {
         if (_runesInfo.TryGetValue(runeId, out var runeInfo))
         {
-            // For tenta runes, use pa_rune or ra_rune value if available
-            if (isTenta)
+            // For Pa runes (like Pa Vi = +15, Pa Fo = +3), use pa_rune value
+            if (runeInfo.PaRuneValue.HasValue)
             {
-                return runeInfo.PaRuneValue ?? runeInfo.RaRuneValue ?? runeInfo.RuneValue;
+                return runeInfo.PaRuneValue.Value;
+            }
+            // For Ra runes, use ra_rune value  
+            if (runeInfo.RaRuneValue.HasValue)
+            {
+                return runeInfo.RaRuneValue.Value;
             }
             // For normal runes, use the base rune value
             return runeInfo.RuneValue;
