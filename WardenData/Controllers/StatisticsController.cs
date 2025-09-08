@@ -53,17 +53,17 @@ public class StatisticsController : ControllerBase
         if (_runesInfo.TryGetValue(runeId, out var runeInfo))
         {
             // For Pa runes (like Pa Vi = +15, Pa Fo = +3), use pa_rune value
-            if (runeInfo.PaRuneValue.HasValue)
+            if (runeInfo.PaRuneValue != null)
             {
-                return runeInfo.PaRuneValue.Value;
+                return (int)runeInfo.PaRuneValue;
             }
             // For Ra runes, use ra_rune value  
-            if (runeInfo.RaRuneValue.HasValue)
+            if (runeInfo.RaRuneValue != null)
             {
-                return runeInfo.RaRuneValue.Value;
+                return (int)runeInfo.RaRuneValue;
             }
             // For normal runes, use the base rune value
-            return runeInfo.RuneValue;
+            return (int)runeInfo.RuneValue;
         }
         // Fallback to minimum expected gain if rune info not found
         return 1;
