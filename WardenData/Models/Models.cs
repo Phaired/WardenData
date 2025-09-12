@@ -32,7 +32,7 @@ public class Effect
 public class Rune
 {
     [Key]
-    public int Id { get; set; }
+    public int Id { get; set; }  // Client-specified ID, not auto-increment
     
     [Required]
     public string Name { get; set; }

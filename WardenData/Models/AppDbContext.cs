@@ -77,7 +77,8 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id)
-                .HasColumnName("id");
+                .HasColumnName("id")
+                .ValueGeneratedNever();  // Client-specified ID, no auto-increment
             
             entity.Property(e => e.Name)
                 .IsRequired()
