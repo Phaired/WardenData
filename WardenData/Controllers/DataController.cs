@@ -135,12 +135,25 @@ public class DataController : ControllerBase
 
                 // Parser et traiter InitialEffects JSON
                 var initialEffectsJson = JsonDocument.Parse(dto.InitialEffects);
-                if (initialEffectsJson.RootElement.TryGetProperty("effects", out var effectsArray) ||
-                    initialEffectsJson.RootElement.ValueKind == JsonValueKind.Array)
+                JsonElement effectsToProcess;
+                
+                if (initialEffectsJson.RootElement.ValueKind == JsonValueKind.Array)
                 {
-                    var effectsToProcess = effectsArray.ValueKind == JsonValueKind.Array ? effectsArray : initialEffectsJson.RootElement;
-                    await ProcessSessionEffects(effectsToProcess, sessionId, sessionInitialEffects);
+                    // Le JSON est directement un tableau d'effets
+                    effectsToProcess = initialEffectsJson.RootElement;
                 }
+                else if (initialEffectsJson.RootElement.TryGetProperty("effects", out var effectsArray))
+                {
+                    // Le JSON est un objet avec une propriété "effects"
+                    effectsToProcess = effectsArray;
+                }
+                else
+                {
+                    // Format non supporté, ignorer
+                    continue;
+                }
+                
+                await ProcessSessionEffects(effectsToProcess, sessionId, sessionInitialEffects);
 
                 // Parser et traiter RunesPrices JSON  
                 var runesPricesJson = JsonDocument.Parse(dto.RunesPrices);
