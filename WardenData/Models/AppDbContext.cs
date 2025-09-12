@@ -132,8 +132,6 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasColumnName("effect_id")
                 .HasColumnType("smallint");
-                
-                
             entity.Property(e => e.MinValue)
                 .HasColumnName("min_value");
                 

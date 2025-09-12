@@ -120,8 +120,7 @@ namespace WardenData.Migrations
                         .HasColumnName("effect_id");
 
                     b.Property<string>("EffectName")
-                        .HasColumnType("text")
-                        .HasColumnName("effect_name");
+                        .HasColumnType("text");
 
                     b.Property<long>("MaxValue")
                         .HasColumnType("bigint")
@@ -185,8 +184,7 @@ namespace WardenData.Migrations
                         .HasColumnName("applied_at");
 
                     b.Property<string>("EffectsAfter")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("effects_after");
+                        .HasColumnType("text");
 
                     b.Property<bool>("HasSucceed")
                         .ValueGeneratedOnAdd()
@@ -258,8 +256,7 @@ namespace WardenData.Migrations
                         .HasColumnName("id");
 
                     b.Property<string>("InitialEffects")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("initial_effects");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid")
@@ -270,8 +267,7 @@ namespace WardenData.Migrations
                         .HasColumnName("original_id");
 
                     b.Property<string>("RunesPrices")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("runes_prices");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("StartedAt")
                         .HasColumnType("timestamp with time zone")
