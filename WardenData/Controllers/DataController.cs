@@ -129,7 +129,7 @@ public class DataController : ControllerBase
                     OriginalId = dto.Id,
                     OrderId = orders[dto.OrderId],
                     Timestamp = dto.Timestamp,
-                    StartedAt = DateTimeOffset.FromUnixTimeMilliseconds(dto.Timestamp).DateTime
+                    StartedAt = DateTimeOffset.FromUnixTimeMilliseconds(dto.Timestamp).UtcDateTime
                 };
                 sessions.Add(session);
 
@@ -196,7 +196,7 @@ public class DataController : ControllerBase
                 }
             }
 
-            // S'assurer que les runes existent
+            // Vérifier que les runes existent (elles devraient déjà être créées par les sessions)
             var runeIds = historyDtos.Select(dto => dto.RuneId).Distinct().ToList();
             var existingRunes = await _context.Runes
                 .Where(r => runeIds.Contains(r.Id))
@@ -206,10 +206,12 @@ public class DataController : ControllerBase
             var missingRunes = runeIds.Where(id => !existingRunes.Contains(id)).ToList();
             if (missingRunes.Any())
             {
+                // Les runes manquantes devraient normalement être créées par les sessions
+                // Si elles n'existent pas, on les crée avec un nom par défaut
                 var newRunes = missingRunes.Select(id => new Rune
                 {
                     Id = id,
-                    Name = $"Rune {id}" // Nom par défaut
+                    Name = $"Rune {id}" // Nom par défaut (ne devrait pas arriver si sessions sont traitées avant)
                 }).ToList();
                 
                 await _context.BulkInsertAsync(newRunes);
@@ -230,7 +232,7 @@ public class DataController : ControllerBase
                     RuneId = dto.RuneId,
                     IsTenta = dto.IsTenta,
                     HasSucceed = dto.HasSucceed,
-                    AppliedAt = DateTime.UtcNow
+                    AppliedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc)
                 };
                 histories.Add(history);
 
@@ -313,18 +315,20 @@ public class DataController : ControllerBase
 
     private async Task ProcessSessionRunePrices(JsonElement runesArray, Guid sessionId, List<SessionRunePrice> sessionRunePrices)
     {
-        var runeIds = new List<int>();
+        var runeData = new List<(int id, string name)>();
         
+        // Extraire les IDs et noms des runes
         foreach (var runeElement in runesArray.EnumerateArray())
         {
-            if (runeElement.TryGetProperty("id", out var idProp))
+            if (runeElement.TryGetProperty("id", out var idProp) && 
+                runeElement.TryGetProperty("name", out var nameProp))
             {
-                runeIds.Add(idProp.GetInt32());
+                runeData.Add((idProp.GetInt32(), nameProp.GetString() ?? $"Rune {idProp.GetInt32()}"));
             }
         }
 
-        // S'assurer que les runes existent
-        await EnsureRunesExist(runeIds);
+        // S'assurer que les runes existent avec leurs vrais noms
+        await EnsureRunesExistWithNames(runeData);
 
         foreach (var runeElement in runesArray.EnumerateArray())
         {
@@ -431,24 +435,47 @@ public class DataController : ControllerBase
         return existingEffects;
     }
 
-    private async Task EnsureRunesExist(List<int> runeIds)
+    private async Task EnsureRunesExistWithNames(List<(int id, string name)> runeData)
     {
+        var runeIds = runeData.Select(r => r.id).ToList();
         var existingRunes = await _context.Runes
             .Where(r => runeIds.Contains(r.Id))
-            .Select(r => r.Id)
-            .ToHashSetAsync();
+            .ToDictionaryAsync(r => r.Id, r => r.Name);
 
-        var missingRunes = runeIds.Where(id => !existingRunes.Contains(id)).ToList();
+        var missingRunes = new List<Rune>();
+        var runesToUpdate = new List<Rune>();
+        
+        foreach (var (id, name) in runeData)
+        {
+            if (!existingRunes.ContainsKey(id))
+            {
+                // Rune n'existe pas, la créer
+                missingRunes.Add(new Rune
+                {
+                    Id = id,
+                    Name = name
+                });
+            }
+            else if (existingRunes[id] != name && existingRunes[id].StartsWith("Rune "))
+            {
+                // Rune existe avec un nom générique, la mettre à jour avec le vrai nom
+                var runeToUpdate = await _context.Runes.FindAsync(id);
+                if (runeToUpdate != null)
+                {
+                    runeToUpdate.Name = name;
+                    runesToUpdate.Add(runeToUpdate);
+                }
+            }
+        }
         
         if (missingRunes.Any())
         {
-            var newRunes = missingRunes.Select(id => new Rune
-            {
-                Id = id,
-                Name = $"Rune {id}"
-            }).ToList();
-            
-            await _context.BulkInsertAsync(newRunes);
+            await _context.BulkInsertAsync(missingRunes);
+        }
+        
+        if (runesToUpdate.Any())
+        {
+            await _context.BulkUpdateAsync(runesToUpdate);
         }
     }
 
