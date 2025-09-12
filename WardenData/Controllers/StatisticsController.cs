@@ -69,84 +69,62 @@ public class StatisticsController : ControllerBase
         return 1;
     }
 
-    private int CalculateRealSuccessesForSession(Session session, List<RuneHistory> runeHistories)
+    private async Task<int> CalculateRealSuccessesForSession(Session session, List<RuneHistory> runeHistories)
     {
         var successCount = 0;
         
-        // Start with initial effects as the "previous" state
-        JsonElement? previousEffectsJson = null;
-        if (session.InitialEffects != null)
+        // Get initial effects from normalized table
+        var initialEffects = await _context.SessionInitialEffects
+            .Where(sie => sie.SessionId == session.Id)
+            .Include(sie => sie.Effect)
+            .ToDictionaryAsync(sie => sie.Effect.Name, sie => sie.Value);
+
+        if (!initialEffects.Any())
         {
-            try
-            {
-                previousEffectsJson = JsonSerializer.Deserialize<JsonElement>(session.InitialEffects);
-            }
-            catch (JsonException)
-            {
-                return 0; // Skip session with malformed initial effects
-            }
+            return 0; // No initial effects data
         }
 
-        var orderedHistories = runeHistories.OrderBy(x => x.Id).ToList();
+        var orderedHistories = runeHistories.OrderBy(x => x.OriginalId).ToList();
+
+        var previousEffects = initialEffects.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
         foreach (var rh in orderedHistories)
         {
-            if (rh.EffectsAfter != null && previousEffectsJson.HasValue)
+            // Get effect changes for this rune history step
+            var effectChanges = await _context.RuneHistoryEffectChanges
+                .Where(rhec => rhec.RuneHistoryId == rh.Id)
+                .Include(rhec => rhec.Effect)
+                .ToListAsync();
+
+            if (effectChanges.Any())
             {
                 try
                 {
-                    var effectsAfter = JsonSerializer.Deserialize<JsonElement>(rh.EffectsAfter);
+                    // Calculate success based on effect changes
+                    var expectedGain = GetExpectedGainForRune(rh.RuneId, rh.IsTenta);
                     
-                    if (effectsAfter.TryGetProperty("effects", out var effectsAfterArray) &&
-                        previousEffectsJson.Value.TryGetProperty("effects", out var previousEffectsArray))
+                    foreach (var change in effectChanges)
                     {
-                        // Create dictionary of previous values for quick lookup
-                        var previousValues = new Dictionary<string, int>();
-                        foreach (var prevEffect in previousEffectsArray.EnumerateArray())
-                        {
-                            if (prevEffect.TryGetProperty("effect_name", out var nameEl) &&
-                                prevEffect.TryGetProperty("current_value", out var valueEl))
-                            {
-                                previousValues[nameEl.GetString() ?? ""] = valueEl.GetInt32();
-                            }
-                        }
-
-                        bool hasAnySuccess = false;
-                        foreach (var effect in effectsAfterArray.EnumerateArray())
-                        {
-                            if (effect.TryGetProperty("effect_name", out var effectNameElement))
-                            {
-                                var name = effectNameElement.GetString() ?? "";
-
-                                // Get current value and previous value for this specific rune application
-                                var currentValue = effect.TryGetProperty("current_value", out var currentEl) ? currentEl.GetInt32() : 0;
-                                var previousValue = previousValues.TryGetValue(name, out var prevVal) ? prevVal : currentValue;
-                                var actualGain = currentValue - previousValue;
-                                
-                                // Determine expected gain based on rune type
-                                var expectedGain = GetExpectedGainForRune(rh.RuneId, rh.IsTenta);
-                                
-                                // Success is determined by actual gain being at least the expected gain
-                                if (actualGain >= expectedGain)
-                                {
-                                    hasAnySuccess = true;
-                                    break; // One successful effect is enough for this rune to be considered successful
-                                }
-                            }
-                        }
+                        var previousValue = change.OldValue ?? 0;
+                        var newValue = change.NewValue;
+                        var actualGain = newValue - previousValue;
                         
-                        if (hasAnySuccess)
+                        if (actualGain >= expectedGain)
                         {
                             successCount++;
+                            break; // Count as one success per rune application
                         }
                     }
                     
-                    // Update previous state for next iteration
-                    previousEffectsJson = effectsAfter;
+                    // Update previousEffects for next iteration
+                    foreach (var change in effectChanges)
+                    {
+                        previousEffects[change.Effect.Name] = change.NewValue;
+                    }
                 }
-                catch (JsonException)
+                catch (Exception)
                 {
-                    // Skip malformed JSON entries
+                    // Skip if there's an error processing effects
                     continue;
                 }
             }
@@ -390,7 +368,7 @@ public class StatisticsController : ControllerBase
             var totalRunesUsed = result.sessionRunes.Count();
             
             // Calculate real successes using the same logic as rune-success-rates
-            var realSuccesses = CalculateRealSuccessesForSession(result.s, result.sessionRunes.ToList());
+            var realSuccesses = await CalculateRealSuccessesForSession(result.s, result.sessionRunes.ToList());
             
             long totalCost = 0;
             if (result.s.RunesPrices != null)

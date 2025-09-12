@@ -72,6 +72,9 @@ public class OrderEffect
     [Required]
     public short EffectId { get; set; }  // FK vers Effect
     
+    // Temporary - for backward compatibility during migration
+    public string? EffectName { get; set; }
+    
     
     public long MinValue { get; set; }
     public long MaxValue { get; set; }
@@ -99,6 +102,10 @@ public class Session
     public long Timestamp { get; set; }
     
     public DateTime? StartedAt { get; set; }
+    
+    // Temporary - for backward compatibility during migration
+    public string? InitialEffects { get; set; }
+    public string? RunesPrices { get; set; }
 
     [ForeignKey("OrderId")]
     public Order Order { get; set; }
@@ -129,6 +136,9 @@ public class RuneHistory
     public bool HasSucceed { get; set; }
     
     public DateTime? AppliedAt { get; set; }
+    
+    // Temporary - for backward compatibility during migration  
+    public string? EffectsAfter { get; set; }
 
     [ForeignKey("SessionId")]
     public Session Session { get; set; }
