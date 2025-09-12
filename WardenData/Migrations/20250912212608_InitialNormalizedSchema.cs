@@ -7,66 +7,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace WardenData.Migrations
 {
     /// <inheritdoc />
-    public partial class NormalizedSchema : Migration
+    public partial class InitialNormalizedSchema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_RuneHistories_session_id",
-                table: "RuneHistories");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "runes_prices",
-                table: "Sessions",
-                type: "jsonb",
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "jsonb");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "initial_effects",
-                table: "Sessions",
-                type: "jsonb",
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "jsonb");
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "started_at",
-                table: "Sessions",
-                type: "timestamp with time zone",
-                nullable: true);
-
-            migrationBuilder.AlterColumn<string>(
-                name: "effects_after",
-                table: "RuneHistories",
-                type: "jsonb",
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "jsonb");
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "applied_at",
-                table: "RuneHistories",
-                type: "timestamp with time zone",
-                nullable: true);
-
-            migrationBuilder.AlterColumn<string>(
-                name: "effect_name",
-                table: "OrderEffects",
-                type: "text",
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "text");
-
-            migrationBuilder.AddColumn<short>(
-                name: "effect_id",
-                table: "OrderEffects",
-                type: "smallint",
-                nullable: false,
-                defaultValue: (short)0);
-
             migrationBuilder.CreateTable(
                 name: "Effects",
                 columns: table => new
@@ -87,6 +32,19 @@ namespace WardenData.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Orders",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    original_id = table.Column<int>(type: "integer", nullable: false),
+                    name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Orders", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Runes",
                 columns: table => new
                 {
@@ -101,27 +59,80 @@ namespace WardenData.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "RuneHistoryEffectChanges",
+                name: "OrderEffects",
                 columns: table => new
                 {
-                    rune_history_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    original_id = table.Column<int>(type: "integer", nullable: false),
+                    order_id = table.Column<Guid>(type: "uuid", nullable: false),
                     effect_id = table.Column<short>(type: "smallint", nullable: false),
-                    old_value = table.Column<int>(type: "integer", nullable: true),
-                    new_value = table.Column<int>(type: "integer", nullable: false)
+                    min_value = table.Column<long>(type: "bigint", nullable: false),
+                    max_value = table.Column<long>(type: "bigint", nullable: false),
+                    desired_value = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RuneHistoryEffectChanges", x => new { x.rune_history_id, x.effect_id });
+                    table.PrimaryKey("PK_OrderEffects", x => x.id);
                     table.ForeignKey(
-                        name: "fk_rune_history_effect_changes_effects",
+                        name: "fk_order_effects_effects",
                         column: x => x.effect_id,
                         principalTable: "Effects",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "fk_rune_history_effect_changes_rune_histories",
-                        column: x => x.rune_history_id,
-                        principalTable: "RuneHistories",
+                        name: "fk_order_effects_orders",
+                        column: x => x.order_id,
+                        principalTable: "Orders",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Sessions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    original_id = table.Column<int>(type: "integer", nullable: false),
+                    order_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    timestamp = table.Column<long>(type: "bigint", nullable: false),
+                    started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Sessions", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_sessions_orders",
+                        column: x => x.order_id,
+                        principalTable: "Orders",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RuneHistories",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    original_id = table.Column<int>(type: "integer", nullable: false),
+                    session_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    rune_id = table.Column<int>(type: "integer", nullable: false),
+                    is_tenta = table.Column<bool>(type: "boolean", nullable: false),
+                    has_succeed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    applied_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RuneHistories", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_rune_histories_runes",
+                        column: x => x.rune_id,
+                        principalTable: "Runes",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_rune_histories_sessions",
+                        column: x => x.session_id,
+                        principalTable: "Sessions",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -176,10 +187,59 @@ namespace WardenData.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "RuneHistoryEffectChanges",
+                columns: table => new
+                {
+                    rune_history_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    effect_id = table.Column<short>(type: "smallint", nullable: false),
+                    old_value = table.Column<int>(type: "integer", nullable: true),
+                    new_value = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RuneHistoryEffectChanges", x => new { x.rune_history_id, x.effect_id });
+                    table.ForeignKey(
+                        name: "fk_rune_history_effect_changes_effects",
+                        column: x => x.effect_id,
+                        principalTable: "Effects",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_rune_history_effect_changes_rune_histories",
+                        column: x => x.rune_history_id,
+                        principalTable: "RuneHistories",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
-                name: "ix_sessions_started_at",
-                table: "Sessions",
-                column: "started_at");
+                name: "ix_effects_code",
+                table: "Effects",
+                column: "code",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_effects_name",
+                table: "Effects",
+                column: "name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderEffects_effect_id",
+                table: "OrderEffects",
+                column: "effect_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderEffects_order_id",
+                table: "OrderEffects",
+                column: "order_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_orders_name",
+                table: "Orders",
+                column: "name",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_rune_histories_applied_at",
@@ -198,23 +258,6 @@ namespace WardenData.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_OrderEffects_effect_id",
-                table: "OrderEffects",
-                column: "effect_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_effects_code",
-                table: "Effects",
-                column: "code",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "ix_effects_name",
-                table: "Effects",
-                column: "name",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "ix_rhec_effect",
                 table: "RuneHistoryEffectChanges",
                 columns: new[] { "effect_id", "rune_history_id" });
@@ -229,33 +272,22 @@ namespace WardenData.Migrations
                 table: "SessionRunePrices",
                 column: "rune_id");
 
-            migrationBuilder.AddForeignKey(
-                name: "fk_order_effects_effects",
-                table: "OrderEffects",
-                column: "effect_id",
-                principalTable: "Effects",
-                principalColumn: "id",
-                onDelete: ReferentialAction.Cascade);
+            migrationBuilder.CreateIndex(
+                name: "IX_Sessions_order_id",
+                table: "Sessions",
+                column: "order_id");
 
-            migrationBuilder.AddForeignKey(
-                name: "fk_rune_histories_runes",
-                table: "RuneHistories",
-                column: "rune_id",
-                principalTable: "Runes",
-                principalColumn: "id",
-                onDelete: ReferentialAction.Cascade);
+            migrationBuilder.CreateIndex(
+                name: "ix_sessions_started_at",
+                table: "Sessions",
+                column: "started_at");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "fk_order_effects_effects",
-                table: "OrderEffects");
-
-            migrationBuilder.DropForeignKey(
-                name: "fk_rune_histories_runes",
-                table: "RuneHistories");
+            migrationBuilder.DropTable(
+                name: "OrderEffects");
 
             migrationBuilder.DropTable(
                 name: "RuneHistoryEffectChanges");
@@ -267,87 +299,19 @@ namespace WardenData.Migrations
                 name: "SessionRunePrices");
 
             migrationBuilder.DropTable(
+                name: "RuneHistories");
+
+            migrationBuilder.DropTable(
                 name: "Effects");
 
             migrationBuilder.DropTable(
                 name: "Runes");
 
-            migrationBuilder.DropIndex(
-                name: "ix_sessions_started_at",
-                table: "Sessions");
+            migrationBuilder.DropTable(
+                name: "Sessions");
 
-            migrationBuilder.DropIndex(
-                name: "ix_rune_histories_applied_at",
-                table: "RuneHistories");
-
-            migrationBuilder.DropIndex(
-                name: "IX_RuneHistories_rune_id",
-                table: "RuneHistories");
-
-            migrationBuilder.DropIndex(
-                name: "uq_rh_session_step",
-                table: "RuneHistories");
-
-            migrationBuilder.DropIndex(
-                name: "IX_OrderEffects_effect_id",
-                table: "OrderEffects");
-
-            migrationBuilder.DropColumn(
-                name: "started_at",
-                table: "Sessions");
-
-            migrationBuilder.DropColumn(
-                name: "applied_at",
-                table: "RuneHistories");
-
-            migrationBuilder.DropColumn(
-                name: "effect_id",
-                table: "OrderEffects");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "runes_prices",
-                table: "Sessions",
-                type: "jsonb",
-                nullable: false,
-                defaultValue: "",
-                oldClrType: typeof(string),
-                oldType: "jsonb",
-                oldNullable: true);
-
-            migrationBuilder.AlterColumn<string>(
-                name: "initial_effects",
-                table: "Sessions",
-                type: "jsonb",
-                nullable: false,
-                defaultValue: "",
-                oldClrType: typeof(string),
-                oldType: "jsonb",
-                oldNullable: true);
-
-            migrationBuilder.AlterColumn<string>(
-                name: "effects_after",
-                table: "RuneHistories",
-                type: "jsonb",
-                nullable: false,
-                defaultValue: "",
-                oldClrType: typeof(string),
-                oldType: "jsonb",
-                oldNullable: true);
-
-            migrationBuilder.AlterColumn<string>(
-                name: "effect_name",
-                table: "OrderEffects",
-                type: "text",
-                nullable: false,
-                defaultValue: "",
-                oldClrType: typeof(string),
-                oldType: "text",
-                oldNullable: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RuneHistories_session_id",
-                table: "RuneHistories",
-                column: "session_id");
+            migrationBuilder.DropTable(
+                name: "Orders");
         }
     }
 }

@@ -12,8 +12,8 @@ using WardenData.Models;
 namespace WardenData.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250912211638_RemoveJsonbColumnsAndFinalizeSchema")]
-    partial class RemoveJsonbColumnsAndFinalizeSchema
+    [Migration("20250912212608_InitialNormalizedSchema")]
+    partial class InitialNormalizedSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
