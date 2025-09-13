@@ -107,9 +107,6 @@ public class AppDbContext : DbContext
                 .HasMaxLength(255)
                 .HasColumnName("name");
             
-            entity.HasIndex(e => e.Name)
-                .IsUnique()
-                .HasDatabaseName("ix_orders_name");
         });
 
         // Configuration de l'entité OrderEffect
