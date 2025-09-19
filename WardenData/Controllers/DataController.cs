@@ -1,100 +1,138 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace WardenData.Controllers;
 
 using WardenData.Models;
-using EFCore.BulkExtensions;
+using WardenData.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 [ApiController]
 [Route("api/[controller]")]
 public class DataController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IDistributedCache _cache;
+    private readonly IQueueService<QueueItem> _queueService;
     private readonly ILogger<DataController> _logger;
 
-    public DataController(AppDbContext context, ILogger<DataController> logger)
+    public DataController(
+        IDistributedCache cache,
+        IQueueService<QueueItem> queueService,
+        ILogger<DataController> logger)
     {
-        _context = context;
+        _cache = cache;
+        _queueService = queueService;
         _logger = logger;
     }
 
     [HttpPost("orders")]
     public async Task<IActionResult> ReceiveOrders([FromBody] List<OrderDTO> orders)
     {
-        // Convert OrderDTOs to Order entities if needed
-        var orderEntities = orders.Select(dto => new Order { Id = dto.Id, Name = dto.Name }).ToList();
-        return await ProcessEntities(orderEntities, _context.Orders);
-    }
+        var trackingId = Guid.NewGuid().ToString();
+        _logger.LogInformation("Received {Count} orders with tracking ID {TrackingId}", orders.Count, trackingId);
 
-    [HttpPost("order-effects")]
-    public async Task<IActionResult> ReceiveOrderEffects(
-        [FromBody] List<OrderEffectDTO> effectDtos)
-    {
-        var effects = effectDtos.Select(dto => new OrderEffect 
-        {
-            Id = dto.Id,
-            OrderId = dto.OrderId,  // Direct mapping to foreign key
-            EffectName = dto.EffectName,
-            MinValue = dto.MinValue,
-            MaxValue = dto.MaxValue,
-            DesiredValue = dto.DesiredValue
-        }).ToList();
-
-        return await ProcessEntities(effects, _context.OrderEffects);
-    }
-
-    [HttpPost("sessions")]
-    public async Task<IActionResult> ReceiveSessions(
-        [FromBody] List<SessionDTO> sessionDtos)
-    {
-        // Convert DTOs to Session entities
-        var sessions = sessionDtos.Select(dto => new Session {
-            Id = dto.Id,
-            OrderId = dto.OrderId,
-            Timestamp = dto.Timestamp,
-            InitialEffects = dto.InitialEffects,
-            RunesPrices = dto.RunesPrices
-        }).ToList();
-
-        // Explicitly specify the generic type parameter
-        return await ProcessEntities<Session>(sessions, _context.Sessions);
-    }
-
-    [HttpPost("rune-history")]
-    public async Task<IActionResult> ReceiveRuneHistory(
-        [FromBody] List<RuneHistoryDTO> historyDtos)
-    {
-        var histories = historyDtos.Select(dto => new RuneHistory
-        {
-            Id = dto.Id,
-            SessionId = dto.SessionId,
-            RuneId = dto.RuneId,
-            IsTenta = dto.IsTenta,
-            EffectsAfter = dto.EffectsAfter.ToString(),
-            HasSucceed = dto.HasSucceed
-        }).ToList();
-
-        return await ProcessEntities(histories, _context.RuneHistories);
-    }
-
-    private async Task<IActionResult> ProcessEntities<T>(
-        List<T> entities, 
-        DbSet<T> dbSet) where T : class
-    {
         try
         {
-            await _context.BulkInsertOrUpdateAsync(entities);
-            return Ok(new { Received = entities.Count });
+            // Cache the data
+            var jsonData = JsonSerializer.Serialize(orders);
+            await _cache.SetStringAsync(trackingId, jsonData, new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+            });
+
+            // Queue for processing
+            await _queueService.EnqueueAsync(new OrderQueueItem { Id = trackingId });
+
+            return Accepted(new { TrackingId = trackingId, Received = orders.Count });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error processing {typeof(T).Name}");
-            return StatusCode(500, $"Error processing {typeof(T).Name}");
+            _logger.LogError(ex, "Error caching orders data");
+            return StatusCode(500, "Error processing request");
+        }
+    }
+
+    [HttpPost("order-effects")]
+    public async Task<IActionResult> ReceiveOrderEffects([FromBody] List<OrderEffectDTO> effectDtos)
+    {
+        var trackingId = Guid.NewGuid().ToString();
+        _logger.LogInformation("Received {Count} order effects with tracking ID {TrackingId}", effectDtos.Count, trackingId);
+
+        try
+        {
+            // Cache the data
+            var jsonData = JsonSerializer.Serialize(effectDtos);
+            await _cache.SetStringAsync(trackingId, jsonData, new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+            });
+
+            // Queue for processing
+            await _queueService.EnqueueAsync(new OrderEffectQueueItem { Id = trackingId });
+
+            return Accepted(new { TrackingId = trackingId, Received = effectDtos.Count });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error caching order effects data");
+            return StatusCode(500, "Error processing request");
+        }
+    }
+
+    [HttpPost("sessions")]
+    public async Task<IActionResult> ReceiveSessions([FromBody] List<SessionDTO> sessionDtos)
+    {
+        var trackingId = Guid.NewGuid().ToString();
+        _logger.LogInformation("Received {Count} sessions with tracking ID {TrackingId}", sessionDtos.Count, trackingId);
+
+        try
+        {
+            // Cache the data
+            var jsonData = JsonSerializer.Serialize(sessionDtos);
+            await _cache.SetStringAsync(trackingId, jsonData, new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+            });
+
+            // Queue for processing
+            await _queueService.EnqueueAsync(new SessionQueueItem { Id = trackingId });
+
+            return Accepted(new { TrackingId = trackingId, Received = sessionDtos.Count });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error caching sessions data");
+            return StatusCode(500, "Error processing request");
+        }
+    }
+
+    [HttpPost("rune-history")]
+    public async Task<IActionResult> ReceiveRuneHistory([FromBody] List<RuneHistoryDTO> historyDtos)
+    {
+        var trackingId = Guid.NewGuid().ToString();
+        _logger.LogInformation("Received {Count} rune histories with tracking ID {TrackingId}", historyDtos.Count, trackingId);
+
+        try
+        {
+            // Cache the data
+            var jsonData = JsonSerializer.Serialize(historyDtos);
+            await _cache.SetStringAsync(trackingId, jsonData, new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+            });
+
+            // Queue for processing
+            await _queueService.EnqueueAsync(new RuneHistoryQueueItem { Id = trackingId });
+
+            return Accepted(new { TrackingId = trackingId, Received = historyDtos.Count });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error caching rune history data");
+            return StatusCode(500, "Error processing request");
         }
     }
 }

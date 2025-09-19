@@ -13,6 +13,9 @@ public class AppDbContext : DbContext
     public DbSet<OrderEffect> OrderEffects => Set<OrderEffect>();
     public DbSet<Session> Sessions => Set<Session>();
     public DbSet<RuneHistory> RuneHistories => Set<RuneHistory>();
+    public DbSet<SessionEffect> SessionEffects => Set<SessionEffect>();
+    public DbSet<SessionRunePrice> SessionRunePrices => Set<SessionRunePrice>();
+    public DbSet<RuneHistoryEffect> RuneHistoryEffects => Set<RuneHistoryEffect>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -69,22 +72,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Session>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             entity.Property(e => e.OrderId)
                 .HasColumnName("order_id");
-                
+
             entity.Property(e => e.Timestamp)
                 .HasColumnName("timestamp");
-                
-            entity.Property(e => e.InitialEffects)
-                .IsRequired()
-                .HasColumnType("jsonb")
-                .HasColumnName("initial_effects");
-                
-            entity.Property(e => e.RunesPrices)
-                .IsRequired()
-                .HasColumnType("jsonb")
-                .HasColumnName("runes_prices");
 
             entity.HasOne(e => e.Order)
                 .WithMany(o => o.Sessions)
@@ -92,29 +85,69 @@ public class AppDbContext : DbContext
                 .HasConstraintName("fk_sessions_orders");
         });
 
+        // SessionEffect configuration
+        modelBuilder.Entity<SessionEffect>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.SessionId)
+                .HasColumnName("session_id");
+
+            entity.Property(e => e.EffectName)
+                .IsRequired()
+                .HasColumnName("effect_name");
+
+            entity.Property(e => e.CurrentValue)
+                .HasColumnName("current_value");
+
+            entity.HasOne(e => e.Session)
+                .WithMany(s => s.SessionEffects)
+                .HasForeignKey(e => e.SessionId)
+                .HasConstraintName("fk_session_effects_sessions");
+        });
+
+        // SessionRunePrice configuration
+        modelBuilder.Entity<SessionRunePrice>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.SessionId)
+                .HasColumnName("session_id");
+
+            entity.Property(e => e.RuneId)
+                .HasColumnName("rune_id");
+
+            entity.Property(e => e.RuneName)
+                .IsRequired()
+                .HasColumnName("rune_name");
+
+            entity.Property(e => e.Price)
+                .HasColumnName("price");
+
+            entity.HasOne(e => e.Session)
+                .WithMany(s => s.SessionRunePrices)
+                .HasForeignKey(e => e.SessionId)
+                .HasConstraintName("fk_session_rune_prices_sessions");
+        });
+
         // RuneHistory configuration
         modelBuilder.Entity<RuneHistory>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             entity.Property(e => e.SessionId)
                 .HasColumnName("session_id");
-                
+
             entity.Property(e => e.RuneId)
                 .HasColumnName("rune_id");
-                
+
             entity.Property(e => e.IsTenta)
                 .HasColumnName("is_tenta");
-                
-            entity.Property(e => e.EffectsAfter)
-                .IsRequired()
-                .HasColumnType("jsonb")
-                .HasColumnName("effects_after");
-                
+
             entity.Property(e => e.HasSucceed)
                 .HasColumnName("has_succeed")
                 .HasDefaultValue(false);
-                
+
             entity.Property(e => e.HasSynchronized)
                 .HasColumnName("has_synchronized")
                 .HasDefaultValue(false);
@@ -123,6 +156,27 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.SessionId)
                 .HasConstraintName("fk_rune_histories_sessions");
+        });
+
+        // RuneHistoryEffect configuration
+        modelBuilder.Entity<RuneHistoryEffect>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.RuneHistoryId)
+                .HasColumnName("rune_history_id");
+
+            entity.Property(e => e.EffectName)
+                .IsRequired()
+                .HasColumnName("effect_name");
+
+            entity.Property(e => e.CurrentValue)
+                .HasColumnName("current_value");
+
+            entity.HasOne(e => e.RuneHistory)
+                .WithMany(r => r.RuneHistoryEffects)
+                .HasForeignKey(e => e.RuneHistoryId)
+                .HasConstraintName("fk_rune_history_effects_rune_histories");
         });
     }
 }

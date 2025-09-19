@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WardenData.Models;
+using WardenData.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,9 +8,22 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+// Add Redis cache
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ?? "redis:6379";
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = redisConnectionString;
+    options.InstanceName = "WardenData";
+});
+
 // Add database context
-builder.Services.AddDbContext<AppDbContext>(options => 
+builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+
+// Add queue and background services
+builder.Services.AddSingleton<IQueueService<QueueItem>, QueueService<QueueItem>>();
+builder.Services.AddScoped<IDataConverter, DataConverter>();
+builder.Services.AddHostedService<DataProcessingBackgroundService>();
 
 var app = builder.Build();
 

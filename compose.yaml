@@ -1,7 +1,8 @@
 ﻿services:
   wardendata:
-    depends_on: 
+    depends_on:
       - database
+      - redis
     container_name: wardendata
     image: wardendata
     ports:
@@ -9,7 +10,9 @@
     build:
       context: .
       dockerfile: WardenData/Dockerfile
-  
+    environment:
+      - REDIS=redis:6379
+
   database:
     container_name: wardendb
     image: postgres:16.4-alpine
@@ -22,6 +25,15 @@
     volumes:
       - db-data:/var/lib/postgresql/data:rw
 
+  redis:
+    container_name: wardenredis
+    image: redis:7.2-alpine
+    ports:
+      - 56379:6379
+    volumes:
+      - redis-data:/data
+
 
 volumes:
   db-data:
+  redis-data:
