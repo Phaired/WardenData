@@ -3,15 +3,58 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WardenData.Models;
 
+public enum UserRole
+{
+    User = 0,
+    Admin = 1
+}
+
+public class User
+{
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public int Id { get; set; }
+
+    [Required]
+    [MaxLength(100)]
+    public string Username { get; set; } = null!;
+
+    [Required]
+    [MaxLength(255)]
+    public string Token { get; set; } = null!;
+
+    [Required]
+    [MaxLength(255)]
+    public string PasswordHash { get; set; } = null!;
+
+    [Required]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Required]
+    public bool IsActive { get; set; } = true;
+
+    [Required]
+    public UserRole Role { get; set; } = UserRole.User;
+
+    // Navigation properties
+    public List<Order> Orders { get; set; } = new();
+}
+
 public class Order
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
-    
+
     [Required]
-    public string Name { get; set; }
-    
+    public int UserId { get; set; }
+
+    [Required]
+    public string Name { get; set; } = null!;
+
+    [ForeignKey("UserId")]
+    public User User { get; set; } = null!;
+
     public List<OrderEffect> OrderEffects { get; set; } = new();
     public List<Session> Sessions { get; set; } = new();
 }
@@ -43,10 +86,16 @@ public class Session
     public int Id { get; set; }
 
     [Required]
+    public int UserId { get; set; }
+
+    [Required]
     public int OrderId { get; set; }
 
     [Required]
     public long Timestamp { get; set; }
+
+    [ForeignKey("UserId")]
+    public User User { get; set; } = null!;
 
     [ForeignKey("OrderId")]
     public Order Order { get; set; } = null!;
@@ -62,6 +111,9 @@ public class RuneHistory
     public int Id { get; set; }
 
     [Required]
+    public int UserId { get; set; }
+
+    [Required]
     public int SessionId { get; set; }
 
     [Required]
@@ -75,6 +127,9 @@ public class RuneHistory
 
     [Required]
     public bool HasSynchronized { get; set; }
+
+    [ForeignKey("UserId")]
+    public User User { get; set; } = null!;
 
     [ForeignKey("SessionId")]
     public Session Session { get; set; } = null!;

@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.EntityFrameworkCore;
 
 namespace WardenData.Controllers;
 
@@ -17,28 +18,56 @@ public class DataController : ControllerBase
     private readonly IDistributedCache _cache;
     private readonly IQueueService<QueueItem> _queueService;
     private readonly ILogger<DataController> _logger;
+    private readonly IAuthService _authService;
 
     public DataController(
         IDistributedCache cache,
         IQueueService<QueueItem> queueService,
-        ILogger<DataController> logger)
+        ILogger<DataController> logger,
+        IAuthService authService)
     {
         _cache = cache;
         _queueService = queueService;
         _logger = logger;
+        _authService = authService;
+    }
+
+    private async Task<User?> GetUserByTokenAsync()
+    {
+        var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+        {
+            return null;
+        }
+
+        var token = authHeader.Substring("Bearer ".Length).Trim();
+        return await _authService.GetUserByTokenAsync(token);
     }
 
     [HttpPost("orders")]
     public async Task<IActionResult> ReceiveOrders([FromBody] List<OrderDTO> orders)
     {
+        // Authenticate user
+        var user = await GetUserByTokenAsync();
+        if (user == null)
+        {
+            return Unauthorized(new { Error = "Invalid or missing token" });
+        }
+
         var trackingId = Guid.NewGuid().ToString();
-        _logger.LogInformation("Received {Count} orders with tracking ID {TrackingId}", orders.Count, trackingId);
+        _logger.LogInformation("Received {Count} orders with tracking ID {TrackingId} for user {UserId}", orders.Count, trackingId, user.Id);
 
         try
         {
-            // Cache the data
+            // Cache the data with user information
             var jsonData = JsonSerializer.Serialize(orders);
-            await _cache.SetStringAsync(trackingId, jsonData, new DistributedCacheEntryOptions
+            var cachedData = new CachedQueueData
+            {
+                UserId = user.Id,
+                JsonData = jsonData
+            };
+            var cachedDataJson = JsonSerializer.Serialize(cachedData);
+            await _cache.SetStringAsync(trackingId, cachedDataJson, new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
             });
@@ -58,14 +87,27 @@ public class DataController : ControllerBase
     [HttpPost("order-effects")]
     public async Task<IActionResult> ReceiveOrderEffects([FromBody] List<OrderEffectDTO> effectDtos)
     {
+        // Authenticate user
+        var user = await GetUserByTokenAsync();
+        if (user == null)
+        {
+            return Unauthorized(new { Error = "Invalid or missing token" });
+        }
+
         var trackingId = Guid.NewGuid().ToString();
-        _logger.LogInformation("Received {Count} order effects with tracking ID {TrackingId}", effectDtos.Count, trackingId);
+        _logger.LogInformation("Received {Count} order effects with tracking ID {TrackingId} for user {UserId}", effectDtos.Count, trackingId, user.Id);
 
         try
         {
-            // Cache the data
+            // Cache the data with user information
             var jsonData = JsonSerializer.Serialize(effectDtos);
-            await _cache.SetStringAsync(trackingId, jsonData, new DistributedCacheEntryOptions
+            var cachedData = new CachedQueueData
+            {
+                UserId = user.Id,
+                JsonData = jsonData
+            };
+            var cachedDataJson = JsonSerializer.Serialize(cachedData);
+            await _cache.SetStringAsync(trackingId, cachedDataJson, new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
             });
@@ -85,14 +127,27 @@ public class DataController : ControllerBase
     [HttpPost("sessions")]
     public async Task<IActionResult> ReceiveSessions([FromBody] List<SessionDTO> sessionDtos)
     {
+        // Authenticate user
+        var user = await GetUserByTokenAsync();
+        if (user == null)
+        {
+            return Unauthorized(new { Error = "Invalid or missing token" });
+        }
+
         var trackingId = Guid.NewGuid().ToString();
-        _logger.LogInformation("Received {Count} sessions with tracking ID {TrackingId}", sessionDtos.Count, trackingId);
+        _logger.LogInformation("Received {Count} sessions with tracking ID {TrackingId} for user {UserId}", sessionDtos.Count, trackingId, user.Id);
 
         try
         {
-            // Cache the data
+            // Cache the data with user information
             var jsonData = JsonSerializer.Serialize(sessionDtos);
-            await _cache.SetStringAsync(trackingId, jsonData, new DistributedCacheEntryOptions
+            var cachedData = new CachedQueueData
+            {
+                UserId = user.Id,
+                JsonData = jsonData
+            };
+            var cachedDataJson = JsonSerializer.Serialize(cachedData);
+            await _cache.SetStringAsync(trackingId, cachedDataJson, new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
             });
@@ -112,14 +167,27 @@ public class DataController : ControllerBase
     [HttpPost("rune-history")]
     public async Task<IActionResult> ReceiveRuneHistory([FromBody] List<RuneHistoryDTO> historyDtos)
     {
+        // Authenticate user
+        var user = await GetUserByTokenAsync();
+        if (user == null)
+        {
+            return Unauthorized(new { Error = "Invalid or missing token" });
+        }
+
         var trackingId = Guid.NewGuid().ToString();
-        _logger.LogInformation("Received {Count} rune histories with tracking ID {TrackingId}", historyDtos.Count, trackingId);
+        _logger.LogInformation("Received {Count} rune histories with tracking ID {TrackingId} for user {UserId}", historyDtos.Count, trackingId, user.Id);
 
         try
         {
-            // Cache the data
+            // Cache the data with user information
             var jsonData = JsonSerializer.Serialize(historyDtos);
-            await _cache.SetStringAsync(trackingId, jsonData, new DistributedCacheEntryOptions
+            var cachedData = new CachedQueueData
+            {
+                UserId = user.Id,
+                JsonData = jsonData
+            };
+            var cachedDataJson = JsonSerializer.Serialize(cachedData);
+            await _cache.SetStringAsync(trackingId, cachedDataJson, new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
             });

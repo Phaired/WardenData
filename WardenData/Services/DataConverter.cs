@@ -14,7 +14,7 @@ public class DataConverter : IDataConverter
         _logger = logger;
     }
 
-    public async Task ProcessSessionDataAsync(string jsonData, AppDbContext context)
+    public async Task ProcessSessionDataAsync(string jsonData, AppDbContext context, int userId)
     {
         try
         {
@@ -35,6 +35,7 @@ public class DataConverter : IDataConverter
                 var session = new Session
                 {
                     Id = dto.Id,
+                    UserId = userId,
                     OrderId = dto.OrderId,
                     Timestamp = dto.Timestamp
                 };
@@ -87,7 +88,7 @@ public class DataConverter : IDataConverter
         }
     }
 
-    public async Task ProcessOrderDataAsync(string jsonData, AppDbContext context)
+    public async Task ProcessOrderDataAsync(string jsonData, AppDbContext context, int userId)
     {
         try
         {
@@ -101,6 +102,7 @@ public class DataConverter : IDataConverter
             var orders = orderDtos.Select(dto => new Order
             {
                 Id = dto.Id,
+                UserId = userId,
                 Name = dto.Name
             }).ToList();
 
@@ -115,7 +117,7 @@ public class DataConverter : IDataConverter
         }
     }
 
-    public async Task ProcessOrderEffectDataAsync(string jsonData, AppDbContext context)
+    public async Task ProcessOrderEffectDataAsync(string jsonData, AppDbContext context, int userId)
     {
         try
         {
@@ -147,7 +149,7 @@ public class DataConverter : IDataConverter
         }
     }
 
-    public async Task ProcessRuneHistoryDataAsync(string jsonData, AppDbContext context)
+    public async Task ProcessRuneHistoryDataAsync(string jsonData, AppDbContext context, int userId)
     {
         try
         {
@@ -167,6 +169,7 @@ public class DataConverter : IDataConverter
                 var history = new RuneHistory
                 {
                     Id = dto.Id,
+                    UserId = userId,
                     SessionId = dto.SessionId,
                     RuneId = dto.RuneId,
                     IsTenta = dto.IsTenta,
@@ -219,4 +222,10 @@ public class RunePriceData
     public int id { get; set; }
     public string name { get; set; } = null!;
     public long price { get; set; }
+}
+
+public class CachedQueueData
+{
+    public int UserId { get; set; }
+    public string JsonData { get; set; } = null!;
 }

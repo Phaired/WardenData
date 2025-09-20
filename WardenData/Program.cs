@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using WardenData.Models;
 using WardenData.Services;
@@ -6,6 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
+builder.Services.AddControllersWithViews();
+builder.Services.AddSession();
 builder.Services.AddOpenApi();
 
 // Add Redis cache
@@ -23,7 +26,18 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Add queue and background services
 builder.Services.AddSingleton<IQueueService<QueueItem>, QueueService<QueueItem>>();
 builder.Services.AddScoped<IDataConverter, DataConverter>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddHostedService<DataProcessingBackgroundService>();
+
+// Add authentication and authorization
+builder.Services.AddAuthentication("Token")
+    .AddScheme<AuthenticationSchemeOptions, TokenAuthenticationHandler>("Token", null);
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+});
 
 var app = builder.Build();
 
@@ -46,7 +60,12 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseSession();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Admin}/{action=Login}/{id?}");
 
 app.Run();

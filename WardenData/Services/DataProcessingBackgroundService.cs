@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 using WardenData.Models;
 
 namespace WardenData.Services;
@@ -89,49 +90,77 @@ public class DataProcessingBackgroundService : BackgroundService
 
     private async Task ProcessSessionData(string queueItemId, IDistributedCache cache, AppDbContext context, IDataConverter dataConverter)
     {
-        var cachedData = await cache.GetStringAsync(queueItemId);
-        if (cachedData == null)
+        var cachedDataJson = await cache.GetStringAsync(queueItemId);
+        if (cachedDataJson == null)
         {
             _logger.LogWarning("No cached data found for session queue item {Id}", queueItemId);
             return;
         }
 
-        await dataConverter.ProcessSessionDataAsync(cachedData, context);
+        var cachedData = JsonSerializer.Deserialize<CachedQueueData>(cachedDataJson);
+        if (cachedData == null)
+        {
+            _logger.LogWarning("Invalid cached data format for session queue item {Id}", queueItemId);
+            return;
+        }
+
+        await dataConverter.ProcessSessionDataAsync(cachedData.JsonData, context, cachedData.UserId);
     }
 
     private async Task ProcessOrderData(string queueItemId, IDistributedCache cache, AppDbContext context, IDataConverter dataConverter)
     {
-        var cachedData = await cache.GetStringAsync(queueItemId);
-        if (cachedData == null)
+        var cachedDataJson = await cache.GetStringAsync(queueItemId);
+        if (cachedDataJson == null)
         {
             _logger.LogWarning("No cached data found for order queue item {Id}", queueItemId);
             return;
         }
 
-        await dataConverter.ProcessOrderDataAsync(cachedData, context);
+        var cachedData = JsonSerializer.Deserialize<CachedQueueData>(cachedDataJson);
+        if (cachedData == null)
+        {
+            _logger.LogWarning("Invalid cached data format for order queue item {Id}", queueItemId);
+            return;
+        }
+
+        await dataConverter.ProcessOrderDataAsync(cachedData.JsonData, context, cachedData.UserId);
     }
 
     private async Task ProcessOrderEffectData(string queueItemId, IDistributedCache cache, AppDbContext context, IDataConverter dataConverter)
     {
-        var cachedData = await cache.GetStringAsync(queueItemId);
-        if (cachedData == null)
+        var cachedDataJson = await cache.GetStringAsync(queueItemId);
+        if (cachedDataJson == null)
         {
             _logger.LogWarning("No cached data found for order effect queue item {Id}", queueItemId);
             return;
         }
 
-        await dataConverter.ProcessOrderEffectDataAsync(cachedData, context);
+        var cachedData = JsonSerializer.Deserialize<CachedQueueData>(cachedDataJson);
+        if (cachedData == null)
+        {
+            _logger.LogWarning("Invalid cached data format for order effect queue item {Id}", queueItemId);
+            return;
+        }
+
+        await dataConverter.ProcessOrderEffectDataAsync(cachedData.JsonData, context, cachedData.UserId);
     }
 
     private async Task ProcessRuneHistoryData(string queueItemId, IDistributedCache cache, AppDbContext context, IDataConverter dataConverter)
     {
-        var cachedData = await cache.GetStringAsync(queueItemId);
-        if (cachedData == null)
+        var cachedDataJson = await cache.GetStringAsync(queueItemId);
+        if (cachedDataJson == null)
         {
             _logger.LogWarning("No cached data found for rune history queue item {Id}", queueItemId);
             return;
         }
 
-        await dataConverter.ProcessRuneHistoryDataAsync(cachedData, context);
+        var cachedData = JsonSerializer.Deserialize<CachedQueueData>(cachedDataJson);
+        if (cachedData == null)
+        {
+            _logger.LogWarning("Invalid cached data format for rune history queue item {Id}", queueItemId);
+            return;
+        }
+
+        await dataConverter.ProcessRuneHistoryDataAsync(cachedData.JsonData, context, cachedData.UserId);
     }
 }
