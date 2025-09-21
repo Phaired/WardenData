@@ -22,23 +22,7 @@ public class AdminApiController : ControllerBase
         _logger = logger;
         _passwordService = passwordService;
     }
-
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
-    {
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Username == loginDto.Username && u.IsActive);
-
-        if (user == null || user.Role != UserRole.Admin)
-        {
-            return Unauthorized(new { Error = "Invalid credentials or insufficient permissions" });
-        }
-
-        // Pour simplifier, on utilise le token existant de l'utilisateur
-        // En production, on générerait un JWT avec expiration
-        return Ok(new { Token = user.Token, Username = user.Username });
-    }
-
+    
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers()
     {
