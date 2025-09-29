@@ -203,6 +203,13 @@ public class DataController : ControllerBase
             return StatusCode(500, "Error processing request");
         }
     }
+
+    [HttpGet("/health")]
+    public IActionResult Health()
+    {
+        _logger.LogInformation("Health check requested");
+        return Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow });
+    }
 }
 
 // DTO Classes

@@ -48,6 +48,25 @@ try
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.Migrate();
     Console.WriteLine("Database migrations applied successfully");
+
+    // Seed default user if no users exist
+    if (!dbContext.Users.Any())
+    {
+        var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
+        var defaultUser = new User
+        {
+            Username = "adm",
+            PasswordHash = passwordService.HashPassword("adm123"),
+            Token = Guid.NewGuid().ToString(),
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true
+        };
+
+        dbContext.Users.Add(defaultUser);
+        dbContext.SaveChanges();
+        Console.WriteLine($"Default admin user created - Username: adm, Token: {defaultUser.Token}");
+    }
 }
 catch (Exception ex)
 {
